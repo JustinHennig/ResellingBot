@@ -1,0 +1,178 @@
+{
+  "ntfy_topic": "reselling-bot-x7k2",
+  "searches": [
+    {
+      "name": "iPhone 13",
+      "query": "iphone 13",
+      "max_price": 150,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13 Mini",
+      "query": "iphone 13 mini",
+      "max_price": 130,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13 Pro Max",
+      "query": "iphone 13 pro max",
+      "max_price": 270,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14",
+      "query": "iphone 14",
+      "max_price": 230,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Plus",
+      "query": "iphone 14 plus",
+      "max_price": 235,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Pro",
+      "query": "iphone 14 pro",
+      "max_price": 315,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Pro Max",
+      "query": "iphone 14 pro max",
+      "max_price": 340,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 15",
+      "query": "iphone 15",
+      "max_price": 280,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16e",
+      "query": "iphone 16e",
+      "max_price": 320,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 12 Mini",
+      "query": "iphone 12 mini",
+      "max_price": 95,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 12 Pro Max",
+      "query": "iphone 12 pro max",
+      "max_price": 180,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S22",
+      "query": "samsung s22",
+      "max_price": 115,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S22 Ultra",
+      "query": "samsung s22 ultra",
+      "max_price": 210,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23",
+      "query": "samsung s23",
+      "max_price": 175,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23 FE",
+      "query": "samsung s23 fe",
+      "max_price": 100,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23 Ultra",
+      "query": "samsung s23 ultra",
+      "max_price": 215,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S24",
+      "query": "samsung s24",
+      "max_price": 295,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25 FE",
+      "query": "samsung s25 fe",
+      "max_price": 370,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25 Ultra",
+      "query": "samsung s25 ultra",
+      "max_price": 650,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S21",
+      "query": "samsung s21",
+      "max_price": 100,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung A54",
+      "query": "samsung a54",
+      "max_price": 85,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung A55",
+      "query": "samsung a55",
+      "max_price": 160,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 7a",
+      "query": "pixel 7a",
+      "max_price": 95,
+      "min_price": 35,
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "check_interval_minutes": 2,
+    "seen_listings_file": "seen_listings.json",
+    "log_file": "bot.log",
+    "keywords_blocked": [
+      "defekt",
+      "bastler",
+      "ersatzteil",
+      "reparatur",
+      "gebrochen"
+    ]
+  }
+}
