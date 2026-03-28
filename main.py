@@ -16,7 +16,7 @@ from pathlib import Path
 import schedule
 
 from notifier import notify_new_listing, send_startup_message, validate_ntfy_config
-from scraper import Listing, fetch_listings, is_good_deal
+from scraper import Listing, fetch_listings, is_good_deal, is_new_seller
 
 CONFIG_FILE = Path(__file__).parent / "config.json"
 
@@ -105,6 +105,9 @@ def check_search(
 
         good, reason = is_good_deal(listing, search_config, global_blocked)
         if good:
+            if is_new_seller(listing.url):
+                logger.info(f"Skipped listing {listing.listing_id}: new seller account")
+                continue
             logger.info(f"Good deal found: {listing.title} — {listing.price}€")
             notify_new_listing(topic, listing, name)
             new_count += 1

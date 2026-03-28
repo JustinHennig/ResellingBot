@@ -10,6 +10,12 @@ from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
+GERMAN_MONTHS = {
+    "januar": 1, "februar": 2, "märz": 3, "april": 4,
+    "mai": 5, "juni": 6, "juli": 7, "august": 8,
+    "september": 9, "oktober": 10, "november": 11, "dezember": 12,
+}
+
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -235,6 +241,62 @@ def _parse_article(article) -> Optional[Listing]:
         image_url=image_url,
         posted_at=posted_at,
     )
+
+
+def _parse_german_date(text: str) -> Optional[datetime]:
+    """Parses a German date like 'Aktiv seit 15. März 2024' into a datetime."""
+    if not text:
+        return None
+    m = re.search(r'(\d{1,2})\.\s*(\w+)\s+(\d{4})', text)
+    if not m:
+        return None
+    day, month_str, year = int(m.group(1)), m.group(2).lower(), int(m.group(3))
+    month = GERMAN_MONTHS.get(month_str)
+    if not month:
+        return None
+    try:
+        return datetime(year, month, day)
+    except ValueError:
+        return None
+
+
+def fetch_seller_join_date(listing_url: str) -> Optional[datetime]:
+    """Fetches the listing detail page and returns the seller's account creation date."""
+    try:
+        time.sleep(1)
+        response = requests.get(listing_url, headers=HEADERS, timeout=15)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.debug(f"Could not fetch listing page for seller check: {e}")
+        return None
+
+    html = re.sub(r'&#(\d+)(?!;)', r'&#\1;', response.text)
+    soup = BeautifulSoup(html, "html.parser")
+
+    date_el = (
+        soup.select_one(".userprofile-vip-membershipdate")
+        or soup.select_one("[class*='membershipdate']")
+    )
+    if date_el:
+        return _parse_german_date(date_el.get_text(strip=True))
+
+    # Fallback: search raw text for "Aktiv seit" / "Mitglied seit"
+    for el in soup.find_all(string=re.compile(r'(?i)(aktiv|mitglied)\s+seit')):
+        date = _parse_german_date(el)
+        if date:
+            return date
+
+    return None
+
+
+def is_new_seller(listing_url: str) -> bool:
+    """Returns True if the seller's account was created today or yesterday (likely a scammer)."""
+    join_date = fetch_seller_join_date(listing_url)
+    if join_date is None:
+        return False  # Can't determine — give benefit of the doubt
+    today = datetime.now().date()
+    yesterday = today - timedelta(days=1)
+    return join_date.date() >= yesterday
 
 
 def is_good_deal(listing: Listing, search_config: dict, global_blocked: list[str] = []) -> tuple[bool, str]:

@@ -15,7 +15,6 @@ def send_notification(topic: str, title: str, body: str, url: str = "") -> bool:
     headers = {
         "Title": title.encode("utf-8"),
         "Priority": "high",
-        "Tags": "bell,iphone",
     }
     if url:
         headers["Click"] = url
@@ -39,12 +38,9 @@ def send_notification(topic: str, title: str, body: str, url: str = "") -> bool:
 def format_listing_message(listing: Listing, search_name: str) -> tuple[str, str]:
     """Returns (title, body) for a push notification."""
     price_str = f"{listing.price} EUR" if listing.price is not None else "Preis auf Anfrage"
-    title = f"{search_name}: {listing.title} — {price_str}"
+    title = f"{search_name}: {listing.title}"
 
-    lines = [
-        f"💶 {price_str}",
-        f"📍 {listing.location}",
-    ]
+    lines = [price_str]
     if listing.description:
         short_desc = listing.description[:150]
         if len(listing.description) > 150:
