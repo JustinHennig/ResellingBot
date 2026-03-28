@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ResellingBot</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0f1117;
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .card {
+        background: #1a1d2e;
+        border: 1px solid #2d3148;
+        border-radius: 18px;
+        padding: 44px 40px 36px;
+        width: 340px;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: -0.4px;
+        color: #fff;
+        margin-bottom: 28px;
+      }
+
+      /* Status badge */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 16px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 28px;
+        transition:
+          background 0.3s,
+          color 0.3s;
+      }
+      .badge.running {
+        background: #14532d33;
+        color: #4ade80;
+        border: 1px solid #4ade8040;
+      }
+      .badge.stopped {
+        background: #450a0a33;
+        color: #f87171;
+        border: 1px solid #f8717140;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .dot.pulse {
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+
+      /* Toggle button */
+      .btn-toggle {
+        width: 100%;
+        padding: 13px;
+        border-radius: 10px;
+        border: none;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          opacity 0.15s,
+          transform 0.1s;
+        margin-bottom: 28px;
+      }
+      .btn-toggle:active:not(:disabled) {
+        transform: scale(0.975);
+      }
+      .btn-toggle:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn-toggle.start {
+        background: #4ade80;
+        color: #052e16;
+      }
+      .btn-toggle.stop {
+        background: #f87171;
+        color: #450a0a;
+      }
+
+      /* Interval section */
+      .section-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #64748b;
+        margin-bottom: 10px;
+      }
+
+      .interval-row {
+        display: flex;
+        gap: 8px;
+      }
+
+      .interval-input {
+        flex: 1;
+        background: #0f1117;
+        border: 1px solid #2d3148;
+        border-radius: 8px;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        padding: 10px 12px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .interval-input:focus {
+        border-color: #6366f1;
+      }
+
+      .btn-set {
+        background: #6366f1;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 18px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+        white-space: nowrap;
+      }
+      .btn-set:hover {
+        background: #4f46e5;
+      }
+
+      /* Toast */
+      .toast {
+        margin-top: 14px;
+        font-size: 0.8rem;
+        min-height: 18px;
+        transition: opacity 0.3s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>ResellingBot</h1>
+
+      <div id="badge" class="badge stopped">
+        <span class="dot" id="dot"></span>
+        <span id="badgeText">Stopped</span>
+      </div>
+
+      <button id="toggleBtn" class="btn-toggle start" onclick="toggleBot()">
+        Start
+      </button>
+
+      <div class="section-label">Check Interval</div>
+      <div class="interval-row">
+        <input
+          type="number"
+          id="intervalInput"
+          class="interval-input"
+          min="1"
+          placeholder="minutes"
+        />
+        <button class="btn-set" onclick="applyInterval()">Set</button>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+      let current = { running: false, interval: 5 };
+
+      async function fetchStatus() {
+        try {
+          const res = await fetch("/api/status");
+          const data = await res.json();
+          applyStatus(data);
+        } catch (_) {
+          /* server unreachable */
+        }
+      }
+
+      function applyStatus(data) {
+        current = data;
+
+        const badge = document.getElementById("badge");
+        const dot = document.getElementById("dot");
+        const text = document.getElementById("badgeText");
+        const btn = document.getElementById("toggleBtn");
+        const input = document.getElementById("intervalInput");
+
+        if (data.running) {
+          badge.className = "badge running";
+          text.textContent = "Running";
+          dot.classList.add("pulse");
+          btn.className = "btn-toggle stop";
+          btn.textContent = "Stop";
+        } else {
+          badge.className = "badge stopped";
+          text.textContent = "Stopped";
+          dot.classList.remove("pulse");
+          btn.className = "btn-toggle start";
+          btn.textContent = "Start";
+        }
+
+        // Update interval field only when not focused
+        if (document.activeElement !== input) {
+          input.value = data.interval;
+        }
+      }
+
+      async function toggleBot() {
+        const btn = document.getElementById("toggleBtn");
+        btn.disabled = true;
+        try {
+          const endpoint = current.running ? "/api/stop" : "/api/start";
+          const res = await fetch(endpoint, { method: "POST" });
+          const data = await res.json();
+          if (!data.ok) showToast(data.error, "error");
+          await fetchStatus();
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      async function applyInterval() {
+        const val = parseInt(
+          document.getElementById("intervalInput").value,
+          10,
+        );
+        if (!val || val < 1) {
+          showToast("Enter a valid interval (≥ 1 min)", "error");
+          return;
+        }
+        const res = await fetch("/api/interval", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ interval: val }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast(`Interval set to ${val} min`);
+          current.interval = val;
+        } else {
+          showToast(data.error, "error");
+        }
+      }
+
+      let toastTimer = null;
+      function showToast(msg, type = "success") {
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.style.color = type === "error" ? "#f87171" : "#4ade80";
+        el.style.opacity = "1";
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.style.opacity = "0";
+        }, 3000);
+      }
+
+      // Poll every 3 seconds
+      fetchStatus();
+      setInterval(fetchStatus, 3000);
+    </script>
+  </body>
+</html>

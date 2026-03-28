@@ -20,6 +20,8 @@ from scraper import Listing, fetch_listings, is_good_deal, is_new_seller
 
 CONFIG_FILE = Path(__file__).parent / "config.json"
 
+logger = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Logging setup
