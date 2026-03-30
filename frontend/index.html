@@ -114,6 +114,10 @@
         background: #f87171;
         color: #450a0a;
       }
+      .btn-toggle.pending {
+        background: #334155;
+        color: #94a3b8;
+      }
 
       /* Interval section */
       .section-label {
@@ -160,6 +164,19 @@
         background: #4f46e5;
       }
 
+      /* Countdown */
+      .countdown {
+        font-size: 0.78rem;
+        color: #64748b;
+        margin-bottom: 20px;
+        min-height: 1.1em;
+        transition: opacity 0.3s;
+      }
+      .countdown span {
+        color: #94a3b8;
+        font-variant-numeric: tabular-nums;
+      }
+
       /* Toast */
       .toast {
         margin-top: 14px;
@@ -178,11 +195,9 @@
         <span id="badgeText">Stopped</span>
       </div>
 
-      <button id="toggleBtn" class="btn-toggle start" onclick="toggleBot()">
-        Start
-      </button>
+      <button id="toggleBtn" class="btn-toggle start">Start</button>
 
-      <div class="section-label">Check Interval</div>
+      <div class="countdown" id="countdown"></div>
       <div class="interval-row">
         <input
           type="number"
@@ -191,106 +206,12 @@
           min="1"
           placeholder="minutes"
         />
-        <button class="btn-set" onclick="applyInterval()">Set</button>
+        <button class="btn-set" id="setIntervalBtn">Set</button>
       </div>
 
       <div class="toast" id="toast"></div>
     </div>
 
-    <script>
-      let current = { running: false, interval: 5 };
-
-      async function fetchStatus() {
-        try {
-          const res = await fetch("/api/status");
-          const data = await res.json();
-          applyStatus(data);
-        } catch (_) {
-          /* server unreachable */
-        }
-      }
-
-      function applyStatus(data) {
-        current = data;
-
-        const badge = document.getElementById("badge");
-        const dot = document.getElementById("dot");
-        const text = document.getElementById("badgeText");
-        const btn = document.getElementById("toggleBtn");
-        const input = document.getElementById("intervalInput");
-
-        if (data.running) {
-          badge.className = "badge running";
-          text.textContent = "Running";
-          dot.classList.add("pulse");
-          btn.className = "btn-toggle stop";
-          btn.textContent = "Stop";
-        } else {
-          badge.className = "badge stopped";
-          text.textContent = "Stopped";
-          dot.classList.remove("pulse");
-          btn.className = "btn-toggle start";
-          btn.textContent = "Start";
-        }
-
-        // Update interval field only when not focused
-        if (document.activeElement !== input) {
-          input.value = data.interval;
-        }
-      }
-
-      async function toggleBot() {
-        const btn = document.getElementById("toggleBtn");
-        btn.disabled = true;
-        try {
-          const endpoint = current.running ? "/api/stop" : "/api/start";
-          const res = await fetch(endpoint, { method: "POST" });
-          const data = await res.json();
-          if (!data.ok) showToast(data.error, "error");
-          await fetchStatus();
-        } finally {
-          btn.disabled = false;
-        }
-      }
-
-      async function applyInterval() {
-        const val = parseInt(
-          document.getElementById("intervalInput").value,
-          10,
-        );
-        if (!val || val < 1) {
-          showToast("Enter a valid interval (≥ 1 min)", "error");
-          return;
-        }
-        const res = await fetch("/api/interval", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ interval: val }),
-        });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(`Interval set to ${val} min`);
-          current.interval = val;
-        } else {
-          showToast(data.error, "error");
-        }
-      }
-
-      let toastTimer = null;
-      function showToast(msg, type = "success") {
-        const el = document.getElementById("toast");
-        el.textContent = msg;
-        el.style.color = type === "error" ? "#f87171" : "#4ade80";
-        el.style.opacity = "1";
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-          el.style.opacity = "0";
-        }, 3000);
-      }
-
-      // Poll every 3 seconds
-      fetchStatus();
-      setInterval(fetchStatus, 3000);
-    </script>
+    <script src="{{ url_for('static', filename='main.js') }}" defer></script>
   </body>
 </html>

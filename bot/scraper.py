@@ -30,6 +30,34 @@ HEADERS = {
     "Upgrade-Insecure-Requests": "1",
 }
 
+# Retryable HTTP status codes (rate-limited or server-side transient errors)
+_RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+def _http_get(url: str, retries: int = 3, base_delay: float = 2.0) -> requests.Response:
+    """
+    GET request with exponential backoff retry.
+    Retries on network errors and retryable HTTP status codes.
+    Raises requests.RequestException after all attempts are exhausted.
+    """
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=15)
+            if response.status_code not in _RETRY_STATUSES:
+                response.raise_for_status()
+                return response
+            # Retryable status — treat like a transient error
+            raise requests.HTTPError(
+                f"HTTP {response.status_code}", response=response
+            )
+        except requests.RequestException as e:
+            if attempt == retries - 1:
+                raise
+            delay = base_delay * (2 ** attempt)  # 2s, 4s, 8s …
+            logger.warning(f"Request failed ({e}), retrying in {delay:.0f}s …")
+            time.sleep(delay)
+    raise RuntimeError("unreachable")
+
 
 @dataclass
 class Listing:
@@ -137,8 +165,7 @@ def fetch_listings(query: str, max_price: int = 0, page: int = 0) -> list[Listin
     logger.debug(f"Fetching: {url}")
 
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
-        response.raise_for_status()
+        response = _http_get(url)
     except requests.RequestException as e:
         logger.error(f"Request failed for query '{query}': {e}")
         return []
@@ -260,38 +287,48 @@ def _parse_german_date(text: str) -> Optional[datetime]:
         return None
 
 
-def fetch_seller_join_date(listing_url: str) -> Optional[datetime]:
-    """Fetches the listing detail page and returns the seller's account creation date."""
+def fetch_listing_details(listing_url: str) -> tuple[str, Optional[datetime]]:
+    """
+    Fetches the listing detail page and returns (full_description, seller_join_date).
+    Makes a single HTTP request used for both the full keyword check and new-seller detection.
+    """
     try:
         time.sleep(1)
-        response = requests.get(listing_url, headers=HEADERS, timeout=15)
-        response.raise_for_status()
+        response = _http_get(listing_url)
     except requests.RequestException as e:
-        logger.debug(f"Could not fetch listing page for seller check: {e}")
-        return None
+        logger.debug(f"Could not fetch listing detail page: {e}")
+        return "", None
 
     html = re.sub(r'&#(\d+)(?!;)', r'&#\1;', response.text)
     soup = BeautifulSoup(html, "html.parser")
 
+    # --- Full description ---
+    desc_el = (
+        soup.select_one("#viewad-description-text")
+        or soup.select_one(".addetailslist")
+        or soup.select_one("[id*='description']")
+    )
+    full_description = desc_el.get_text(" ", strip=True) if desc_el else ""
+
+    # --- Seller join date ---
+    join_date: Optional[datetime] = None
     date_el = (
         soup.select_one(".userprofile-vip-membershipdate")
         or soup.select_one("[class*='membershipdate']")
     )
     if date_el:
-        return _parse_german_date(date_el.get_text(strip=True))
+        join_date = _parse_german_date(date_el.get_text(strip=True))
+    else:
+        for el in soup.find_all(string=re.compile(r'(?i)(aktiv|mitglied)\s+seit')):
+            join_date = _parse_german_date(el)
+            if join_date:
+                break
 
-    # Fallback: search raw text for "Aktiv seit" / "Mitglied seit"
-    for el in soup.find_all(string=re.compile(r'(?i)(aktiv|mitglied)\s+seit')):
-        date = _parse_german_date(el)
-        if date:
-            return date
-
-    return None
+    return full_description, join_date
 
 
-def is_new_seller(listing_url: str) -> bool:
+def is_new_seller(join_date: Optional[datetime]) -> bool:
     """Returns True if the seller's account was created today or yesterday (likely a scammer)."""
-    join_date = fetch_seller_join_date(listing_url)
     if join_date is None:
         return False  # Can't determine — give benefit of the doubt
     today = datetime.now().date()
@@ -325,6 +362,13 @@ def is_good_deal(listing: Listing, search_config: dict, global_blocked: list[str
     for kw in keywords_blocked:
         if kw.lower() in text:
             return False, f"Gesperrtes Keyword gefunden: '{kw}'"
+
+    # Verify listing is actually about the searched product:
+    # all words from the query must appear as whole words in the listing text
+    query_words = search_config.get("query", "").lower().split()
+    for word in query_words:
+        if not re.search(rf'\b{re.escape(word)}\b', text):
+            return False, f"Suchwort '{word}' nicht im Inserat gefunden"
 
     # Required keywords
     for kw in keywords_required:
