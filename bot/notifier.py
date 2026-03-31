@@ -1,8 +1,6 @@
 import logging
 import requests
-from typing import Optional
 from bot.scraper import Listing
-from bot.scorer import format_stars
 
 logger = logging.getLogger(__name__)
 
@@ -76,20 +74,11 @@ def send_whatsapp_image(wa_config: dict, image_url: str, caption: str) -> bool:
         return False
 
 
-def format_listing_message(
-    listing: Listing,
-    search_name: str,
-    score: Optional[tuple[int, str]] = None,
-) -> str:
+def format_listing_message(listing: Listing, search_name: str) -> str:
     """Returns formatted WhatsApp message body for a listing."""
     price_str = f"{listing.price} EUR" if listing.price is not None else "Preis auf Anfrage"
 
     lines = [f"*{search_name}: {listing.title}*"]
-
-    if score is not None:
-        stars, reason = score
-        lines.append(f"{format_stars(stars)}  {reason}")
-
     lines.append(price_str)
 
     if listing.description:
@@ -102,14 +91,9 @@ def format_listing_message(
     return "\n".join(lines)
 
 
-def notify_new_listing(
-    wa_config: dict,
-    listing: Listing,
-    search_name: str,
-    score: Optional[tuple[int, str]] = None,
-) -> bool:
+def notify_new_listing(wa_config: dict, listing: Listing, search_name: str) -> bool:
     """Sends a WhatsApp notification for a new listing, with image if available."""
-    body = format_listing_message(listing, search_name, score=score)
+    body = format_listing_message(listing, search_name)
 
     if listing.image_url:
         success = send_whatsapp_image(wa_config, listing.image_url, body)

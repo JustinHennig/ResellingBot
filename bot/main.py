@@ -19,7 +19,6 @@ import schedule
 
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
 from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal, is_new_seller
-from bot.scorer import score_listing
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
@@ -103,7 +102,15 @@ def save_seen_listings(path: str, seen: set[str]) -> None:
     tmp = p.with_suffix(".tmp")
     with tmp.open("w", encoding="utf-8") as f:
         json.dump(timestamps, f, indent=2, sort_keys=True)
-    tmp.replace(p)
+    try:
+        tmp.replace(p)
+    except PermissionError:
+        # On Windows, os.replace can fail if the target is briefly locked
+        # (e.g. by antivirus).  Fall back to a plain overwrite — the write
+        # is already serialised by _seen_lock so this is safe.
+        import shutil
+        shutil.copy2(tmp, p)
+        tmp.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +124,6 @@ def check_search(
     seen_file: str,
     global_blocked: list[str],
     stop_event,
-    claude_config: dict | None = None,
 ) -> None:
     """Runs one search cycle for a single search config entry."""
     name = search_config.get("name", search_config.get("query", "?"))
@@ -135,7 +141,7 @@ def check_search(
     for page in range(3):
         if stop_event.is_set():
             return
-        page_listings = fetch_listings(query, max_price=max_price, page=page)
+        page_listings = fetch_listings(query, page=page)
         if not page_listings:
             break
         listings.extend(page_listings)
@@ -187,15 +193,7 @@ def check_search(
                 continue
 
         logger.info(f"Good deal found: {listing.title} — {listing.price}€")
-        score = None
-        if claude_config and claude_config.get("api_key"):
-            score = score_listing(
-                listing,
-                search_name=name,
-                max_price=max_price,
-                api_key=claude_config["api_key"],
-            )
-        notify_new_listing(wa_config, listing, name, score=score)
+        notify_new_listing(wa_config, listing, name)
         new_count += 1
 
     with _seen_lock:
@@ -213,13 +211,12 @@ def run_all_searches(config: dict, seen: set[str], stop_event=None) -> None:
     seen_file = config["settings"].get("seen_listings_file", "seen_listings.json")
     global_blocked = config["settings"].get("keywords_blocked", [])
     max_workers = config["settings"].get("max_workers", 6)
-    claude_config = config.get("claude")
 
     active_searches = [s for s in config.get("searches", []) if s.get("enabled", True)]
 
     def _run(search):
         try:
-            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, claude_config)
+            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event)
         except Exception as e:
             logger.error(
                 f"Unexpected error in search '{search.get('name')}': {e}\n"

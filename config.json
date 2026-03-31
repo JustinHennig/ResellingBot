@@ -4,9 +4,6 @@
     "phone_number_id": "1045411721989479",
     "recipient": "4915906011396"
   },
-  "claude": {
-    "api_key": "YOUR_ANTHROPIC_API_KEY_HERE"
-  },
   "searches": [
     { "name": "iPhone 12",         "query": "iphone 12",         "max_price": 95, "min_price": 35, "keywords_blocked": ["mini", "pro"], "enabled": true },
     { "name": "iPhone 12 Mini",    "query": "iphone 12 mini",    "max_price": 85,  "min_price": 35, "enabled": true },
