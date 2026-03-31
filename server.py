@@ -9,6 +9,7 @@ Usage:
 Then open http://localhost:5000 in your browser.
 """
 
+import json
 import logging
 import threading
 import time
@@ -16,7 +17,7 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template, request
 
-from bot.main import load_config, load_seen_listings, run_all_searches, setup_logging
+from bot.main import CONFIG_FILE, load_config, load_seen_listings, run_all_searches, setup_logging
 
 app = Flask(
     __name__,
@@ -143,6 +144,91 @@ def api_interval():
         _interval_overridden = True  # Don't let config reload overwrite this
 
     return jsonify({"ok": True, "interval": interval})
+
+
+@app.route("/api/searches")
+def api_searches():
+    with _lock:
+        searches = _config.get("searches", [])
+    result = [
+        {
+            "name": s.get("name", s.get("query", "?")),
+            "min_price": s.get("min_price", 0),
+            "max_price": s.get("max_price", 0),
+            "enabled": s.get("enabled", True),
+        }
+        for s in searches
+    ]
+    return jsonify(result)
+
+
+def _save_config() -> None:
+    """Write _config back to config.json atomically. Must be called under _lock."""
+    tmp = CONFIG_FILE.with_suffix(".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(_config, f, indent=2, ensure_ascii=False)
+    try:
+        tmp.replace(CONFIG_FILE)
+    except PermissionError:
+        import shutil
+        shutil.copy2(tmp, CONFIG_FILE)
+        tmp.unlink(missing_ok=True)
+
+
+@app.route("/api/searches/toggle", methods=["POST"])
+def api_searches_toggle():
+    data = request.get_json(silent=True) or {}
+    name = data.get("name")
+    if not name:
+        return jsonify({"ok": False, "error": "name required"}), 400
+
+    with _lock:
+        new_state = None
+        for s in _config.get("searches", []):
+            if s.get("name") == name:
+                s["enabled"] = not s.get("enabled", True)
+                new_state = s["enabled"]
+                break
+        if new_state is None:
+            return jsonify({"ok": False, "error": "Search not found"}), 404
+        try:
+            _save_config()
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    return jsonify({"ok": True, "name": name, "enabled": new_state})
+
+
+@app.route("/api/searches/price", methods=["POST"])
+def api_searches_price():
+    data = request.get_json(silent=True) or {}
+    name = data.get("name")
+    if not name:
+        return jsonify({"ok": False, "error": "name required"}), 400
+
+    try:
+        max_price = int(data.get("max_price", 0))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "max_price must be a number"}), 400
+
+    if max_price < 0:
+        return jsonify({"ok": False, "error": "max_price must be ≥ 0"}), 400
+
+    with _lock:
+        found = False
+        for s in _config.get("searches", []):
+            if s.get("name") == name:
+                s["max_price"] = max_price
+                found = True
+                break
+        if not found:
+            return jsonify({"ok": False, "error": "Search not found"}), 404
+        try:
+            _save_config()
+        except Exception as exc:
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    return jsonify({"ok": True, "name": name, "max_price": max_price})
 
 
 # ---------------------------------------------------------------------------

@@ -5,72 +5,466 @@
     "recipient": "4915906011396"
   },
   "searches": [
-    { "name": "iPhone 12",         "query": "iphone 12",         "max_price": 95, "min_price": 35, "keywords_blocked": ["mini", "pro"], "enabled": true },
-    { "name": "iPhone 12 Mini",    "query": "iphone 12 mini",    "max_price": 85,  "min_price": 35, "enabled": true },
-    { "name": "iPhone 12 Pro",     "query": "iphone 12 pro",     "max_price": 140, "min_price": 35, "keywords_blocked": ["max"], "enabled": true },
-    { "name": "iPhone 12 Pro Max", "query": "iphone 12 pro max", "max_price": 180, "min_price": 35, "enabled": true },
-
-    { "name": "iPhone 13",         "query": "iphone 13",         "max_price": 130, "min_price": 35, "keywords_blocked": ["mini", "pro"], "enabled": true },
-    { "name": "iPhone 13 Mini",    "query": "iphone 13 mini",    "max_price": 130, "min_price": 35, "enabled": true },
-    { "name": "iPhone 13 Pro",     "query": "iphone 13 pro",     "max_price": 180, "min_price": 35, "keywords_blocked": ["max"], "enabled": true },
-    { "name": "iPhone 13 Pro Max", "query": "iphone 13 pro max", "max_price": 260, "min_price": 35, "enabled": true },
-
-    { "name": "iPhone 14",         "query": "iphone 14",         "max_price": 200, "min_price": 35, "keywords_blocked": ["plus", "pro"], "enabled": true },
-    { "name": "iPhone 14 Plus",    "query": "iphone 14 plus",    "max_price": 225, "min_price": 35, "enabled": true },
-    { "name": "iPhone 14 Pro",     "query": "iphone 14 pro",     "max_price": 290, "min_price": 35, "keywords_blocked": ["max"], "enabled": true },
-    { "name": "iPhone 14 Pro Max", "query": "iphone 14 pro max", "max_price": 340, "min_price": 35, "enabled": true },
-
-    { "name": "iPhone 15",         "query": "iphone 15",         "max_price": 280, "min_price": 35, "keywords_blocked": ["plus", "pro"], "enabled": true },
-    { "name": "iPhone 15 Plus",    "query": "iphone 15 plus",    "max_price": 290, "min_price": 35, "enabled": true },
-    { "name": "iPhone 15 Pro",     "query": "iphone 15 pro",     "max_price": 350, "min_price": 35, "keywords_blocked": ["max"], "enabled": true },
-    { "name": "iPhone 15 Pro Max", "query": "iphone 15 pro max", "max_price": 420, "min_price": 35, "enabled": true },
-
-    { "name": "iPhone 16",         "query": "iphone 16",         "max_price": 420, "min_price": 35, "keywords_blocked": ["plus", "pro", "16e"], "enabled": true },
-    { "name": "iPhone 16 Plus",    "query": "iphone 16 plus",    "max_price": 440, "min_price": 35, "enabled": true },
-    { "name": "iPhone 16 Pro",     "query": "iphone 16 pro",     "max_price": 500, "min_price": 35, "keywords_blocked": ["max"], "enabled": true },
-    { "name": "iPhone 16 Pro Max", "query": "iphone 16 pro max", "max_price": 530, "min_price": 35, "enabled": true },
-    { "name": "iPhone 16e",        "query": "iphone 16e",        "max_price": 320, "min_price": 35, "enabled": true },
-
-    { "name": "Samsung A54",       "query": "samsung a54",       "max_price": 85,  "min_price": 35, "enabled": true },
-    { "name": "Samsung A55",       "query": "samsung a55",       "max_price": 90, "min_price": 35, "enabled": true },
-
-    { "name": "Samsung S21",       "query": "samsung s21",       "max_price": 90, "min_price": 35, "keywords_blocked": ["fe", "ultra", "plus"], "enabled": true },
-    { "name": "Samsung S21 FE",    "query": "samsung s21 fe",    "max_price": 80,  "min_price": 35, "enabled": true },
-    { "name": "Samsung S21 Plus",  "query": "samsung s21 plus",  "max_price": 110, "min_price": 35, "keywords_blocked": ["fe", "ultra"], "enabled": true },
-    { "name": "Samsung S21 Ultra", "query": "samsung s21 ultra", "max_price": 130, "min_price": 35, "enabled": true },
-
-    { "name": "Samsung S22",       "query": "samsung s22",       "max_price": 110, "min_price": 35, "keywords_blocked": ["ultra", "plus"], "enabled": true },
-    { "name": "Samsung S22 Plus",  "query": "samsung s22 plus",  "max_price": 130, "min_price": 35, "keywords_blocked": ["ultra"], "enabled": true },
-    { "name": "Samsung S22 Ultra", "query": "samsung s22 ultra", "max_price": 190, "min_price": 35, "enabled": true },
-
-
-    { "name": "Samsung S23",       "query": "samsung s23",       "max_price": 160, "min_price": 35, "keywords_blocked": ["fe", "ultra", "plus"], "enabled": true },
-    { "name": "Samsung S23 FE",    "query": "samsung s23 fe",    "max_price": 130, "min_price": 35, "enabled": true },
-    { "name": "Samsung S23 Plus",  "query": "samsung s23 plus",  "max_price": 180, "min_price": 35, "keywords_blocked": ["fe", "ultra"], "enabled": true },
-    { "name": "Samsung S23 Ultra", "query": "samsung s23 ultra", "max_price": 250, "min_price": 35, "enabled": true },
-
-    { "name": "Samsung S24",       "query": "samsung s24",       "max_price": 280, "min_price": 35, "keywords_blocked": ["fe", "ultra", "plus"], "enabled": true },
-    { "name": "Samsung S24 FE",    "query": "samsung s24 fe",    "max_price": 200, "min_price": 35, "enabled": true },
-    { "name": "Samsung S24 Plus",  "query": "samsung s24 plus",  "max_price": 330, "min_price": 35, "keywords_blocked": ["fe", "ultra"], "enabled": true },
-    { "name": "Samsung S24 Ultra", "query": "samsung s24 ultra", "max_price": 400, "min_price": 35, "enabled": true },
-
-    { "name": "Samsung S25",       "query": "samsung s25",       "max_price": 380, "min_price": 35, "keywords_blocked": ["fe", "ultra", "plus"], "enabled": true },
-    { "name": "Samsung S25 FE",    "query": "samsung s25 fe",    "max_price": 290, "min_price": 35, "enabled": true },
-    { "name": "Samsung S25 Plus",  "query": "samsung s25 plus",  "max_price": 420, "min_price": 35, "keywords_blocked": ["fe", "ultra"], "enabled": true },
-    { "name": "Samsung S25 Ultra", "query": "samsung s25 ultra", "max_price": 570, "min_price": 35, "enabled": true },
-
-    { "name": "Google Pixel 7",        "query": "pixel 7",        "max_price": 100, "min_price": 35, "keywords_blocked": ["pro", "7a"], "enabled": true },
-    { "name": "Google Pixel 7a",       "query": "pixel 7a",       "max_price": 90,  "min_price": 35, "enabled": true },
-    { "name": "Google Pixel 7 Pro",    "query": "pixel 7 pro",    "max_price": 120, "min_price": 35, "enabled": true },
-
-    { "name": "Google Pixel 8",        "query": "pixel 8",        "max_price": 160, "min_price": 35, "keywords_blocked": ["pro", "xl", "8a"], "enabled": true },
-    { "name": "Google Pixel 8a",       "query": "pixel 8a",       "max_price": 130, "min_price": 35, "enabled": true },
-    { "name": "Google Pixel 8 Pro",    "query": "pixel 8 pro",    "max_price": 200, "min_price": 35, "enabled": true },
-
-    { "name": "Google Pixel 9",        "query": "pixel 9",        "max_price": 320, "min_price": 35, "keywords_blocked": ["pro", "xl", "9a"], "enabled": true },
-    { "name": "Google Pixel 9a",       "query": "pixel 9a",       "max_price": 270, "min_price": 35, "enabled": true },
-    { "name": "Google Pixel 9 Pro",    "query": "pixel 9 pro",    "max_price": 420, "min_price": 35, "keywords_blocked": ["xl"], "enabled": true },
-    { "name": "Google Pixel 9 Pro XL", "query": "pixel 9 pro xl", "max_price": 480, "min_price": 35, "enabled": true }
+    {
+      "name": "iPhone 12",
+      "query": "iphone 12",
+      "max_price": 90,
+      "min_price": 35,
+      "keywords_blocked": [
+        "mini",
+        "pro"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 12 Mini",
+      "query": "iphone 12 mini",
+      "max_price": 85,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 12 Pro",
+      "query": "iphone 12 pro",
+      "max_price": 140,
+      "min_price": 35,
+      "keywords_blocked": [
+        "max"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 12 Pro Max",
+      "query": "iphone 12 pro max",
+      "max_price": 180,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13",
+      "query": "iphone 13",
+      "max_price": 130,
+      "min_price": 35,
+      "keywords_blocked": [
+        "mini",
+        "pro"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13 Mini",
+      "query": "iphone 13 mini",
+      "max_price": 130,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13 Pro",
+      "query": "iphone 13 pro",
+      "max_price": 180,
+      "min_price": 35,
+      "keywords_blocked": [
+        "max"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 13 Pro Max",
+      "query": "iphone 13 pro max",
+      "max_price": 260,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14",
+      "query": "iphone 14",
+      "max_price": 200,
+      "min_price": 35,
+      "keywords_blocked": [
+        "plus",
+        "pro"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Plus",
+      "query": "iphone 14 plus",
+      "max_price": 225,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Pro",
+      "query": "iphone 14 pro",
+      "max_price": 290,
+      "min_price": 35,
+      "keywords_blocked": [
+        "max"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 14 Pro Max",
+      "query": "iphone 14 pro max",
+      "max_price": 340,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 15",
+      "query": "iphone 15",
+      "max_price": 280,
+      "min_price": 35,
+      "keywords_blocked": [
+        "plus",
+        "pro"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 15 Plus",
+      "query": "iphone 15 plus",
+      "max_price": 290,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 15 Pro",
+      "query": "iphone 15 pro",
+      "max_price": 350,
+      "min_price": 35,
+      "keywords_blocked": [
+        "max"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 15 Pro Max",
+      "query": "iphone 15 pro max",
+      "max_price": 420,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16",
+      "query": "iphone 16",
+      "max_price": 420,
+      "min_price": 35,
+      "keywords_blocked": [
+        "plus",
+        "pro",
+        "16e"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16 Plus",
+      "query": "iphone 16 plus",
+      "max_price": 440,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16 Pro",
+      "query": "iphone 16 pro",
+      "max_price": 500,
+      "min_price": 35,
+      "keywords_blocked": [
+        "max"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16 Pro Max",
+      "query": "iphone 16 pro max",
+      "max_price": 530,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "iPhone 16e",
+      "query": "iphone 16e",
+      "max_price": 320,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung A54",
+      "query": "samsung a54",
+      "max_price": 85,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung A55",
+      "query": "samsung a55",
+      "max_price": 90,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S21",
+      "query": "samsung s21",
+      "max_price": 90,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra",
+        "plus"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S21 FE",
+      "query": "samsung s21 fe",
+      "max_price": 80,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S21 Plus",
+      "query": "samsung s21 plus",
+      "max_price": 110,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S21 Ultra",
+      "query": "samsung s21 ultra",
+      "max_price": 130,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S22",
+      "query": "samsung s22",
+      "max_price": 110,
+      "min_price": 35,
+      "keywords_blocked": [
+        "ultra",
+        "plus"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S22 Plus",
+      "query": "samsung s22 plus",
+      "max_price": 130,
+      "min_price": 35,
+      "keywords_blocked": [
+        "ultra"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S22 Ultra",
+      "query": "samsung s22 ultra",
+      "max_price": 190,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23",
+      "query": "samsung s23",
+      "max_price": 160,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra",
+        "plus"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23 FE",
+      "query": "samsung s23 fe",
+      "max_price": 130,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23 Plus",
+      "query": "samsung s23 plus",
+      "max_price": 180,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S23 Ultra",
+      "query": "samsung s23 ultra",
+      "max_price": 250,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S24",
+      "query": "samsung s24",
+      "max_price": 280,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra",
+        "plus"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S24 FE",
+      "query": "samsung s24 fe",
+      "max_price": 200,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S24 Plus",
+      "query": "samsung s24 plus",
+      "max_price": 330,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S24 Ultra",
+      "query": "samsung s24 ultra",
+      "max_price": 400,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25",
+      "query": "samsung s25",
+      "max_price": 380,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra",
+        "plus"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25 FE",
+      "query": "samsung s25 fe",
+      "max_price": 290,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25 Plus",
+      "query": "samsung s25 plus",
+      "max_price": 420,
+      "min_price": 35,
+      "keywords_blocked": [
+        "fe",
+        "ultra"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Samsung S25 Ultra",
+      "query": "samsung s25 ultra",
+      "max_price": 570,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 7",
+      "query": "pixel 7",
+      "max_price": 100,
+      "min_price": 35,
+      "keywords_blocked": [
+        "pro",
+        "7a"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 7a",
+      "query": "pixel 7a",
+      "max_price": 90,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 7 Pro",
+      "query": "pixel 7 pro",
+      "max_price": 120,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 8",
+      "query": "pixel 8",
+      "max_price": 160,
+      "min_price": 35,
+      "keywords_blocked": [
+        "pro",
+        "xl",
+        "8a"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 8a",
+      "query": "pixel 8a",
+      "max_price": 130,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 8 Pro",
+      "query": "pixel 8 pro",
+      "max_price": 200,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 9",
+      "query": "pixel 9",
+      "max_price": 320,
+      "min_price": 35,
+      "keywords_blocked": [
+        "pro",
+        "xl",
+        "9a"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 9a",
+      "query": "pixel 9a",
+      "max_price": 270,
+      "min_price": 35,
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 9 Pro",
+      "query": "pixel 9 pro",
+      "max_price": 420,
+      "min_price": 35,
+      "keywords_blocked": [
+        "xl"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "Google Pixel 9 Pro XL",
+      "query": "pixel 9 pro xl",
+      "max_price": 480,
+      "min_price": 35,
+      "enabled": true
+    }
   ],
   "settings": {
     "max_workers": 6,

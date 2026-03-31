@@ -22,6 +22,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 24px 12px;
       }
 
       .card {
@@ -29,7 +30,8 @@
         border: 1px solid #2d3148;
         border-radius: 18px;
         padding: 44px 40px 36px;
-        width: 340px;
+        width: 460px;
+        max-width: 100%;
         text-align: center;
       }
 
@@ -184,6 +186,115 @@
         min-height: 18px;
         transition: opacity 0.3s;
       }
+
+      /* Searches list */
+      .searches-section {
+        margin-top: 28px;
+        border-top: 1px solid #2d3148;
+        padding-top: 20px;
+        text-align: left;
+      }
+
+      .searches-list {
+        max-height: 300px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-right: 2px;
+      }
+      .searches-list::-webkit-scrollbar { width: 4px; }
+      .searches-list::-webkit-scrollbar-track { background: transparent; }
+      .searches-list::-webkit-scrollbar-thumb {
+        background: #2d3148;
+        border-radius: 4px;
+      }
+
+      .search-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 7px;
+        transition: background 0.15s;
+      }
+      .search-row:hover { background: #0f1117; }
+      .search-row.disabled .search-name,
+      .search-row.disabled .price-inputs { opacity: 0.35; }
+
+      .search-name {
+        flex: 1;
+        font-size: 0.85rem;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+      }
+
+      .price-inputs {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+      .price-sep {
+        font-size: 0.75rem;
+        color: #475569;
+      }
+      .price-input {
+        width: 52px;
+        background: #0f1117;
+        border: 1px solid #2d3148;
+        border-radius: 5px;
+        color: #94a3b8;
+        font-size: 0.78rem;
+        padding: 3px 6px;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.15s, color 0.15s;
+      }
+      .price-input:focus {
+        border-color: #6366f1;
+        color: #e2e8f0;
+      }
+      .price-input.saving {
+        opacity: 0.5;
+      }
+
+      /* Toggle switch */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .toggle-slider {
+        position: absolute;
+        inset: 0;
+        background: #334155;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .toggle-slider::before {
+        content: "";
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        left: 3px;
+        bottom: 3px;
+        background: #64748b;
+        border-radius: 50%;
+        transition: transform 0.2s, background 0.2s;
+      }
+      input:checked + .toggle-slider { background: #4ade80; }
+      input:checked + .toggle-slider::before {
+        transform: translateX(16px);
+        background: #052e16;
+      }
     </style>
   </head>
   <body>
@@ -210,6 +321,11 @@
       </div>
 
       <div class="toast" id="toast"></div>
+
+      <div class="searches-section">
+        <p class="section-label">Searches</p>
+        <div id="searchesList" class="searches-list"></div>
+      </div>
     </div>
 
     <script src="{{ url_for('static', filename='main.js') }}" defer></script>
