@@ -1,13 +1,7 @@
-"""
-ResellingBot — Web Server
-
-Runs the bot in a background thread and exposes a small REST API
-so the frontend can start/stop the bot and change the interval.
-
-Usage:
-    python server.py
-Then open http://localhost:5000 in your browser.
-"""
+# ResellingBot — Web Server
+# Runs the bot in a background thread and exposes a small REST API
+# so the frontend can start/stop the bot and change the interval.
+# Usage: python server.py, then open http://localhost:5000 in your browser.
 
 import json
 import logging
@@ -43,6 +37,7 @@ _next_run_at: float = 0.0           # Unix timestamp of the next scheduled searc
 # Bot loop
 # ---------------------------------------------------------------------------
 
+# Background thread that reloads config, runs all searches, then sleeps until the next cycle.
 def _bot_loop() -> None:
     global _config, _next_run_at
     logger = logging.getLogger("server")
@@ -89,11 +84,13 @@ def _bot_loop() -> None:
 # Routes
 # ---------------------------------------------------------------------------
 
+# Serves the main UI page.
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
+# Returns current bot state: running flag, check interval, and seconds until the next run.
 @app.route("/api/status")
 def api_status():
     with _lock:
@@ -103,6 +100,7 @@ def api_status():
     return jsonify(data)
 
 
+# Starts the bot loop in a background thread. Returns 409 if already running.
 @app.route("/api/start", methods=["POST"])
 def api_start():
     global _bot_thread
@@ -117,6 +115,7 @@ def api_start():
     return jsonify({"ok": True})
 
 
+# Signals the bot loop to stop. Returns 409 if not running.
 @app.route("/api/stop", methods=["POST"])
 def api_stop():
     with _lock:
@@ -127,6 +126,7 @@ def api_stop():
     return jsonify({"ok": True})
 
 
+# Updates the check interval (minutes). Overrides the value from config.json for this session.
 @app.route("/api/interval", methods=["POST"])
 def api_interval():
     global _interval_overridden
@@ -146,6 +146,7 @@ def api_interval():
     return jsonify({"ok": True, "interval": interval})
 
 
+# Returns the list of configured searches with name, min/max price, and enabled state.
 @app.route("/api/searches")
 def api_searches():
     with _lock:
@@ -162,8 +163,8 @@ def api_searches():
     return jsonify(result)
 
 
+# Write _config back to config.json atomically. Must be called under _lock.
 def _save_config() -> None:
-    """Write _config back to config.json atomically. Must be called under _lock."""
     tmp = CONFIG_FILE.with_suffix(".tmp")
     with tmp.open("w", encoding="utf-8") as f:
         json.dump(_config, f, indent=2, ensure_ascii=False)
@@ -175,6 +176,7 @@ def _save_config() -> None:
         tmp.unlink(missing_ok=True)
 
 
+# Toggles the enabled state of a search by name and persists the change to config.json.
 @app.route("/api/searches/toggle", methods=["POST"])
 def api_searches_toggle():
     data = request.get_json(silent=True) or {}
@@ -199,6 +201,7 @@ def api_searches_toggle():
     return jsonify({"ok": True, "name": name, "enabled": new_state})
 
 
+# Updates the max_price for a search by name and persists the change to config.json.
 @app.route("/api/searches/price", methods=["POST"])
 def api_searches_price():
     data = request.get_json(silent=True) or {}
@@ -229,6 +232,21 @@ def api_searches_price():
             return jsonify({"ok": False, "error": str(exc)}), 500
 
     return jsonify({"ok": True, "name": name, "max_price": max_price})
+
+
+# Clears the seen listings in memory and on disk so the bot re-evaluates all listings.
+@app.route("/api/seen/clear", methods=["POST"])
+def api_seen_clear():
+    global _seen
+    seen_file = _config.get("settings", {}).get("seen_listings_file", "seen_listings.json")
+    seen_path = CONFIG_FILE.parent / seen_file
+    with _lock:
+        _seen = set()
+    try:
+        seen_path.write_text("{}", encoding="utf-8")
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    return jsonify({"ok": True})
 
 
 # ---------------------------------------------------------------------------

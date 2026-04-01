@@ -1,3 +1,5 @@
+# WhatsApp notification helpers: formats listing data and delivers messages
+# via the Meta WhatsApp Cloud API (v22.0).
 import logging
 import requests
 from bot.scraper import Listing
@@ -7,8 +9,8 @@ logger = logging.getLogger(__name__)
 WA_API_URL = "https://graph.facebook.com/v22.0"
 
 
+# Sends a WhatsApp text message via the Meta Cloud API.
 def send_whatsapp_message(wa_config: dict, body: str) -> bool:
-    """Sends a WhatsApp text message via the Meta Cloud API."""
     token = wa_config["token"]
     phone_number_id = wa_config["phone_number_id"]
     recipient = wa_config["recipient"]
@@ -39,8 +41,8 @@ def send_whatsapp_message(wa_config: dict, body: str) -> bool:
         return False
 
 
+# Sends a WhatsApp image message with caption via the Meta Cloud API.
 def send_whatsapp_image(wa_config: dict, image_url: str, caption: str) -> bool:
-    """Sends a WhatsApp image message with caption via the Meta Cloud API."""
     token = wa_config["token"]
     phone_number_id = wa_config["phone_number_id"]
     recipient = wa_config["recipient"]
@@ -74,12 +76,24 @@ def send_whatsapp_image(wa_config: dict, image_url: str, caption: str) -> bool:
         return False
 
 
+# Returns formatted WhatsApp message body for a listing.
 def format_listing_message(listing: Listing, search_name: str) -> str:
-    """Returns formatted WhatsApp message body for a listing."""
-    price_str = f"{listing.price} EUR" if listing.price is not None else "Preis auf Anfrage"
+    if listing.price is not None:
+        price_str = f"{listing.price} EUR (VB)" if listing.negotiable else f"{listing.price} EUR"
+    else:
+        price_str = "Preis auf Anfrage"
 
     lines = [f"*{search_name}: {listing.title}*"]
+
+    # AI score line, e.g. "⭐ Score: 8/10"
+    if listing.ai_score is not None:
+        lines.append(f"⭐ Score: {listing.ai_score}/10")
+
     lines.append(price_str)
+
+    # AI warning for non-original/modified parts
+    if listing.ai_warning:
+        lines.append(f"⚠️ {listing.ai_warning}")
 
     if listing.description:
         short_desc = listing.description[:200]
@@ -91,8 +105,8 @@ def format_listing_message(listing: Listing, search_name: str) -> str:
     return "\n".join(lines)
 
 
+# Sends a WhatsApp notification for a new listing, with image if available.
 def notify_new_listing(wa_config: dict, listing: Listing, search_name: str) -> bool:
-    """Sends a WhatsApp notification for a new listing, with image if available."""
     body = format_listing_message(listing, search_name)
 
     if listing.image_url:
@@ -109,14 +123,14 @@ def notify_new_listing(wa_config: dict, listing: Listing, search_name: str) -> b
     return success
 
 
+# Sends a startup confirmation WhatsApp message.
 def send_startup_message(wa_config: dict, search_names: list[str]) -> None:
-    """Sends a startup confirmation WhatsApp message."""
     names_str = ", ".join(search_names)
     send_whatsapp_message(wa_config, f"✅ Reselling Bot gestartet\nAktive Suchen: {names_str}")
 
 
+# Checks that all required WhatsApp config fields are present.
 def validate_whatsapp_config(wa_config: dict) -> bool:
-    """Checks that all required WhatsApp config fields are present."""
     required = ["token", "phone_number_id", "recipient"]
     for field in required:
         if not wa_config.get(field):

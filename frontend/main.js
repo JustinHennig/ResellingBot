@@ -1,8 +1,16 @@
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
 let current = { running: false, interval: 5 };
 let pending = null; // "starting" | "stopping" | null
 let countdownSecs = null; // local countdown, decremented every second
 let countdownTimer = null;
 
+// ---------------------------------------------------------------------------
+// Status polling
+// ---------------------------------------------------------------------------
+
+// Fetches the current bot status from the server and applies it to the UI.
 async function fetchStatus() {
   try {
     const res = await fetch("/api/status");
@@ -13,6 +21,8 @@ async function fetchStatus() {
   }
 }
 
+// Updates badge, button, interval input, and countdown based on the latest API response.
+// Ignores updates while a start/stop transition is still in progress.
 function applyStatus(data) {
   current = data;
 
@@ -55,6 +65,7 @@ function applyStatus(data) {
   startCountdown(data.running ? data.next_run_in : null);
 }
 
+// Syncs the local countdown to a server-supplied value and starts ticking it down every second.
 function startCountdown(secs) {
   clearInterval(countdownTimer);
   countdownSecs = secs;
@@ -66,6 +77,7 @@ function startCountdown(secs) {
   }, 1000);
 }
 
+// Renders the countdown text element based on the current countdownSecs value.
 function renderCountdown() {
   const el = document.getElementById("countdown");
   if (countdownSecs === null) {
@@ -82,6 +94,8 @@ function renderCountdown() {
   }
 }
 
+// Sends a start or stop request, locks the button, and sets the pending state
+// so applyStatus() waits for the expected final state before re-enabling the UI.
 async function toggleBot() {
   const btn = document.getElementById("toggleBtn");
   const isRunning = current.running;
@@ -108,6 +122,7 @@ async function toggleBot() {
   }
 }
 
+// Reads the interval input and POSTs the new value to /api/interval.
 async function applyInterval() {
   const val = parseInt(document.getElementById("intervalInput").value, 10);
   if (!val || val < 1) {
@@ -129,6 +144,7 @@ async function applyInterval() {
 }
 
 let toastTimer = null;
+// Shows a brief success (green) or error (red) toast message.
 function showToast(msg, type = "success") {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -144,6 +160,7 @@ function showToast(msg, type = "success") {
 // Searches list
 // ---------------------------------------------------------------------------
 
+// Fetches the list of searches from /api/searches and passes them to renderSearches().
 async function fetchSearches() {
   try {
     const res = await fetch("/api/searches");
@@ -152,6 +169,7 @@ async function fetchSearches() {
   } catch (_) { /* ignore */ }
 }
 
+// Builds the search list DOM — one row per search with a name label, max-price input, and toggle.
 function renderSearches(searches) {
   const list = document.getElementById("searchesList");
   list.innerHTML = "";
@@ -225,6 +243,7 @@ function renderSearches(searches) {
   }
 }
 
+// Calls /api/searches/toggle for the given search name and updates the row's disabled class.
 async function toggleSearch(name, checkbox, row) {
   checkbox.disabled = true;
   try {
@@ -248,12 +267,25 @@ async function toggleSearch(name, checkbox, row) {
 }
 
 // ---------------------------------------------------------------------------
+// Clears the seen listings file so the bot will re-check all listings.
+async function clearSeenListings() {
+  if (!confirm("Clear all seen listings? The bot will re-notify you about listings it has already seen.")) return;
+  const res = await fetch("/api/seen/clear", { method: "POST" });
+  const data = await res.json();
+  if (data.ok) {
+    showToast("Seen listings cleared");
+  } else {
+    showToast(data.error || "Clear failed", "error");
+  }
+}
+
 // Init
 // ---------------------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("toggleBtn").addEventListener("click", toggleBot);
   document.getElementById("setIntervalBtn").addEventListener("click", applyInterval);
+  document.getElementById("clearSeenBtn").addEventListener("click", clearSeenListings);
 
   fetchStatus();
   fetchSearches();

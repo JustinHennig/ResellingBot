@@ -1,9 +1,7 @@
-"""
-ResellingBot — Kleinanzeigen Monitor
-Überwacht Suchanfragen und benachrichtigt per Telegram bei guten Angeboten.
-
-Konfiguration: config.json
-"""
+# Orchestration layer: loads config and seen listings, runs all searches in parallel,
+# and coordinates notifications via WhatsApp.
+# Configuration is read from config.json (see bot/scraper.py for scraping logic,
+# bot/notifier.py for WhatsApp delivery).
 
 import json
 import logging
@@ -19,6 +17,7 @@ import schedule
 
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
 from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal, is_new_seller
+from bot.ai_scorer import score_listing
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 
@@ -30,6 +29,7 @@ _seen_lock = Lock()
 # Logging setup
 # ---------------------------------------------------------------------------
 
+# Configures root logger to write to stdout and, optionally, a log file.
 def setup_logging(log_file: str) -> None:
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
@@ -42,6 +42,7 @@ def setup_logging(log_file: str) -> None:
 # Config helpers
 # ---------------------------------------------------------------------------
 
+# Reads and returns config.json; exits with an error message if the file is missing.
 def load_config() -> dict:
     if not CONFIG_FILE.exists():
         print(f"[ERROR] Konfigurationsdatei nicht gefunden: {CONFIG_FILE}")
@@ -57,6 +58,7 @@ def load_config() -> dict:
 SEEN_MAX_AGE_DAYS = 30  # IDs older than this are removed from seen_listings.json
 
 
+# Loads previously seen listing IDs from disk, pruning entries older than SEEN_MAX_AGE_DAYS.
 def load_seen_listings(path: str) -> set[str]:
     p = Path(path)
     if not p.exists():
@@ -84,6 +86,7 @@ def load_seen_listings(path: str) -> set[str]:
         return set()
 
 
+# Saves seen listing IDs with ISO timestamps to disk using an atomic write.
 def save_seen_listings(path: str, seen: set[str]) -> None:
     p = Path(path)
     # Load existing timestamps so first-seen dates are preserved across saves
@@ -117,6 +120,7 @@ def save_seen_listings(path: str, seen: set[str]) -> None:
 # Core check logic
 # ---------------------------------------------------------------------------
 
+# Runs one search cycle for a single search config entry.
 def check_search(
     search_config: dict,
     seen: set[str],
@@ -124,8 +128,8 @@ def check_search(
     seen_file: str,
     global_blocked: list[str],
     stop_event,
+    groq_api_key: str = "",
 ) -> None:
-    """Runs one search cycle for a single search config entry."""
     name = search_config.get("name", search_config.get("query", "?"))
     query = search_config.get("query", "")
     max_price = search_config.get("max_price", 0)
@@ -192,6 +196,13 @@ def check_search(
                 logger.info(f"Skipped listing {listing.listing_id} after full desc check: {reason}")
                 continue
 
+        # AI scoring — only runs if a Groq API key is configured
+        if groq_api_key:
+            score, warning = score_listing(listing, groq_api_key)
+            listing.ai_score = score
+            listing.ai_warning = warning
+            logger.info(f"AI score for {listing.listing_id}: {score}/10 — warning: '{warning}'")
+
         logger.info(f"Good deal found: {listing.title} — {listing.price}€")
         notify_new_listing(wa_config, listing, name)
         new_count += 1
@@ -203,6 +214,7 @@ def check_search(
     )
 
 
+# Runs all enabled searches from config in parallel using a thread pool.
 def run_all_searches(config: dict, seen: set[str], stop_event=None) -> None:
     import threading
     if stop_event is None:
@@ -211,12 +223,13 @@ def run_all_searches(config: dict, seen: set[str], stop_event=None) -> None:
     seen_file = config["settings"].get("seen_listings_file", "seen_listings.json")
     global_blocked = config["settings"].get("keywords_blocked", [])
     max_workers = config["settings"].get("max_workers", 6)
+    groq_api_key = config["settings"].get("groq_api_key", "")
 
     active_searches = [s for s in config.get("searches", []) if s.get("enabled", True)]
 
     def _run(search):
         try:
-            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event)
+            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, groq_api_key)
         except Exception as e:
             logger.error(
                 f"Unexpected error in search '{search.get('name')}': {e}\n"

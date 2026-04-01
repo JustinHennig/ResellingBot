@@ -1,3 +1,5 @@
+# Kleinanzeigen scraper: fetches search result pages and listing detail pages,
+# parses them into Listing objects, and applies deal-quality filters.
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -10,12 +12,14 @@ from urllib.parse import quote_plus
 
 logger = logging.getLogger(__name__)
 
+# Mapping from German month names to month numbers, used when parsing seller join dates.
 GERMAN_MONTHS = {
     "januar": 1, "februar": 2, "märz": 3, "april": 4,
     "mai": 5, "juni": 6, "juli": 7, "august": 8,
     "september": 9, "oktober": 10, "november": 11, "dezember": 12,
 }
 
+# Browser-like HTTP headers sent with every request to avoid bot detection.
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -28,18 +32,19 @@ HEADERS = {
     "DNT": "1",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
+    # Accept Kleinanzeigen's GDPR consent wall so detail pages load properly.
+    # Without this the bot gets the cookie-consent page instead of the listing.
+    "Cookie": "ANON_CONSENT_AGREED=1; ANON_CONSENT_VERSION=1",
 }
 
 # Retryable HTTP status codes (rate-limited or server-side transient errors)
 _RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
+# GET request with exponential backoff retry.
+# Retries on network errors and retryable HTTP status codes.
+# Raises requests.RequestException after all attempts are exhausted.
 def _http_get(url: str, retries: int = 3, base_delay: float = 2.0) -> requests.Response:
-    """
-    GET request with exponential backoff retry.
-    Retries on network errors and retryable HTTP status codes.
-    Raises requests.RequestException after all attempts are exhausted.
-    """
     for attempt in range(retries):
         try:
             response = requests.get(url, headers=HEADERS, timeout=15)
@@ -59,6 +64,7 @@ def _http_get(url: str, retries: int = 3, base_delay: float = 2.0) -> requests.R
     raise RuntimeError("unreachable")
 
 
+# Represents a single Kleinanzeigen listing with all parsed fields.
 @dataclass
 class Listing:
     listing_id: str
@@ -69,10 +75,13 @@ class Listing:
     description: str
     image_url: str
     posted_at: Optional[datetime] = None
+    negotiable: bool = False  # True when the price has "VB" (Verhandlungsbasis)
+    ai_score: Optional[int] = None  # 1-10 resale value score from Gemini (None = not scored)
+    ai_warning: str = ""  # Non-empty when Gemini detected non-original parts or modifications
 
 
+# Builds the Kleinanzeigen search URL.
 def build_search_url(query: str, page: int = 0) -> str:
-    """Builds the Kleinanzeigen search URL."""
     encoded_query = quote_plus(query)
     page_segment = f"/seite:{page + 1}" if page > 0 else ""
     return (
@@ -82,11 +91,9 @@ def build_search_url(query: str, page: int = 0) -> str:
     )
 
 
+# Parses Kleinanzeigen timestamp strings into a datetime.
+# Examples: 'Heute, 14:30', 'Gestern, 09:15', '22.03.2026', 'Gerade eben'
 def parse_posted_at(text: str) -> Optional[datetime]:
-    """
-    Parses Kleinanzeigen timestamp strings into a datetime.
-    Examples: 'Heute, 14:30', 'Gestern, 09:15', '22.03.2026', 'Gerade eben'
-    """
     if not text:
         return None
     # Strip HTML entities and tags before processing
@@ -129,10 +136,9 @@ def parse_posted_at(text: str) -> Optional[datetime]:
     return None
 
 
+# Extracts integer price from a price string like '350 €' or 'VB 350 €'.
+# Returns None if the text looks like location data, HTML, or anything other than a price.
 def parse_price(price_text: str) -> Optional[int]:
-    """Extracts integer price from a price string like '350 €' or 'VB 350 €'.
-    Returns None if the text looks like location data, HTML, or anything other than a price.
-    """
     if not price_text:
         return None
     # Reject HTML content immediately
@@ -154,11 +160,9 @@ def parse_price(price_text: str) -> Optional[int]:
     return price if price <= 9999 else None
 
 
+# Fetches listings from Kleinanzeigen for a given search query.
+# Returns a list of Listing objects.
 def fetch_listings(query: str, page: int = 0) -> list[Listing]:
-    """
-    Fetches listings from Kleinanzeigen for a given search query.
-    Returns a list of Listing objects.
-    """
     url = build_search_url(query, page=page)
     logger.debug(f"Fetching: {url}")
 
@@ -194,8 +198,8 @@ def fetch_listings(query: str, page: int = 0) -> list[Listing]:
     return listings
 
 
+# Parses a single article/li element into a Listing.
 def _parse_article(article) -> Optional[Listing]:
-    """Parses a single article/li element into a Listing."""
 
     # --- ID ---
     listing_id = (
@@ -233,6 +237,7 @@ def _parse_article(article) -> Optional[Listing]:
     )
     price_text = price_el.get_text(strip=True) if price_el else ""
     price = parse_price(price_text)
+    negotiable = bool(re.search(r'\bVB\b', price_text, re.IGNORECASE))
 
     # --- Location ---
     location_el = article.select_one(".aditem-main--top--left")
@@ -260,6 +265,7 @@ def _parse_article(article) -> Optional[Listing]:
         listing_id=str(listing_id),
         title=title,
         price=price,
+        negotiable=negotiable,
         location=location,
         url=full_url,
         description=description,
@@ -268,8 +274,8 @@ def _parse_article(article) -> Optional[Listing]:
     )
 
 
+# Parses a German date like 'Aktiv seit 15. März 2024' into a datetime.
 def _parse_german_date(text: str) -> Optional[datetime]:
-    """Parses a German date like 'Aktiv seit 15. März 2024' into a datetime."""
     if not text:
         return None
     m = re.search(r'(\d{1,2})\.\s*(\w+)\s+(\d{4})', text)
@@ -285,11 +291,9 @@ def _parse_german_date(text: str) -> Optional[datetime]:
         return None
 
 
+# Fetches the listing detail page and returns (full_description, seller_join_date).
+# Makes a single HTTP request used for both the full keyword check and new-seller detection.
 def fetch_listing_details(listing_url: str) -> tuple[str, Optional[datetime]]:
-    """
-    Fetches the listing detail page and returns (full_description, seller_join_date).
-    Makes a single HTTP request used for both the full keyword check and new-seller detection.
-    """
     try:
         time.sleep(1)
         response = _http_get(listing_url)
@@ -298,6 +302,12 @@ def fetch_listing_details(listing_url: str) -> tuple[str, Optional[datetime]]:
         return "", None
 
     html = re.sub(r'&#(\d+)(?!;)', r'&#\1;', response.text)
+
+    # Detect the GDPR consent wall — if we got it, the cookie bypass failed
+    if "ANON_CONSENT" in html or "Datenschutzeinstellungen" in html and "viewad" not in html:
+        logger.warning("Got GDPR consent wall on detail page — seller date check unavailable")
+        return "", None
+
     soup = BeautifulSoup(html, "html.parser")
 
     # --- Full description ---
@@ -325,8 +335,8 @@ def fetch_listing_details(listing_url: str) -> tuple[str, Optional[datetime]]:
     return full_description, join_date
 
 
+# Returns True if the seller's account was created today or yesterday (likely a scammer).
 def is_new_seller(join_date: Optional[datetime]) -> bool:
-    """Returns True if the seller's account was created today or yesterday (likely a scammer)."""
     if join_date is None:
         return False  # Can't determine — give benefit of the doubt
     today = datetime.now().date()
@@ -334,11 +344,9 @@ def is_new_seller(join_date: Optional[datetime]) -> bool:
     return join_date.date() >= yesterday
 
 
+# Checks whether a listing matches the configured criteria.
+# Returns (is_good, reason_string).
 def is_good_deal(listing: Listing, search_config: dict, global_blocked: list[str] = []) -> tuple[bool, str]:
-    """
-    Checks whether a listing matches the configured criteria.
-    Returns (is_good, reason_string).
-    """
     min_price = search_config.get("min_price", 0)
     max_price = search_config.get("max_price", 0)
     keywords_required: list[str] = search_config.get("keywords_required", [])

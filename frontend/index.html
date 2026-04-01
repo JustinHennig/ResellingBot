@@ -4,37 +4,57 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ResellingBot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
   </head>
   <body>
     <div class="card">
-      <h1>ResellingBot</h1>
 
-      <div id="badge" class="badge stopped">
-        <span class="dot" id="dot"></span>
-        <span id="badgeText">Stopped</span>
+      <!-- Header -->
+      <div class="header">
+        <div class="header-title">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <h1>ResellingBot</h1>
+        </div>
+        <div id="badge" class="badge stopped">
+          <span class="dot" id="dot"></span>
+          <span id="badgeText">Stopped</span>
+        </div>
       </div>
 
-      <button id="toggleBtn" class="btn-toggle start">Start</button>
+      <!-- Controls -->
+      <div class="control-row">
+        <button id="toggleBtn" class="btn-toggle start">Start</button>
+        <div class="interval-group">
+          <input
+            type="number"
+            id="intervalInput"
+            class="interval-input"
+            min="1"
+            placeholder="5"
+          />
+          <span class="interval-unit">min</span>
+          <button class="btn-set" id="setIntervalBtn">Set</button>
+        </div>
+      </div>
 
       <div class="countdown" id="countdown"></div>
-      <div class="interval-row">
-        <input
-          type="number"
-          id="intervalInput"
-          class="interval-input"
-          min="1"
-          placeholder="minutes"
-        />
-        <button class="btn-set" id="setIntervalBtn">Set</button>
+
+      <!-- Searches -->
+      <div class="searches-section">
+        <div class="section-header">
+          <p class="section-label">Searches</p>
+          <button id="clearSeenBtn" class="btn-danger">Clear seen listings</button>
+        </div>
+        <div id="searchesList" class="searches-list"></div>
       </div>
 
       <div class="toast" id="toast"></div>
-
-      <div class="searches-section">
-        <p class="section-label">Searches</p>
-        <div id="searchesList" class="searches-list"></div>
-      </div>
     </div>
 
     <script src="{{ url_for('static', filename='main.js') }}" defer></script>
