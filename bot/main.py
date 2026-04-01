@@ -20,6 +20,7 @@ from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_
 from bot.ai_scorer import score_listing
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
+CREDENTIALS_FILE = Path(__file__).parent.parent / "credentials.json"
 
 logger = logging.getLogger(__name__)
 _seen_lock = Lock()
@@ -42,13 +43,29 @@ def setup_logging(log_file: str) -> None:
 # Config helpers
 # ---------------------------------------------------------------------------
 
-# Reads and returns config.json; exits with an error message if the file is missing.
+# Reads config.json and merges credentials.json on top (credentials take priority).
+# credentials.json is gitignored and holds API keys / tokens.
 def load_config() -> dict:
     if not CONFIG_FILE.exists():
         print(f"[ERROR] Konfigurationsdatei nicht gefunden: {CONFIG_FILE}")
         sys.exit(1)
     with CONFIG_FILE.open(encoding="utf-8") as f:
-        return json.load(f)
+        config = json.load(f)
+
+    # Merge credentials if the file exists
+    if CREDENTIALS_FILE.exists():
+        with CREDENTIALS_FILE.open(encoding="utf-8") as f:
+            creds = json.load(f)
+        # Merge groq_api_key into settings
+        if creds.get("groq_api_key"):
+            config.setdefault("settings", {})["groq_api_key"] = creds["groq_api_key"]
+        # Merge whatsapp block (deep merge — credentials values win)
+        if creds.get("whatsapp"):
+            config.setdefault("whatsapp", {}).update(
+                {k: v for k, v in creds["whatsapp"].items() if v}
+            )
+
+    return config
 
 
 # ---------------------------------------------------------------------------

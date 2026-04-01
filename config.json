@@ -485,8 +485,8 @@
     ]
   },
   "whatsapp": {
-    "token": "EAAdohj4yidYBRNMSzWaZCO2VP67E8SNydTXAo3g1oHdVZAFMLU5Pry8aZAab2FbVnFQAjxUmPE9AlGSHYx8aTGKuH9DB98hY3IWEYXZCGotBCEfZAAZB3JIBwRav5rLWP4NbCacZAVvI0TgCXPnp8j0r0lagkn3oiHDiViXi4EelKZAY4lh301ZAi1OBpp7FKVQZDZD",
-    "phone_number_id": "1045411721989479",
-    "recipient": "4915906011396"
+    "token": "",
+    "phone_number_id": "",
+    "recipient": ""
   }
 }
