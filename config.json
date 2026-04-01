@@ -462,7 +462,7 @@
     }
   ],
   "settings": {
-    "groq_api_key": "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",
+    "groq_api_key": "",
     "max_workers": 6,
     "check_interval_minutes": 2,
     "seen_listings_file": "data/seen_listings.json",
