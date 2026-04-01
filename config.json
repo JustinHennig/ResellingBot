@@ -462,7 +462,7 @@
     }
   ],
   "settings": {
-    "groq_api_key": "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",
+    "groq_api_key": "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",
     "max_workers": 6,
     "check_interval_minutes": 2,
     "seen_listings_file": "data/seen_listings.json",
@@ -485,8 +485,11 @@
     ]
   },
   "whatsapp": {
-    "token": "",
-    "phone_number_id": "",
-    "recipient": ""
+    "token": "EAAdohj4yidYBRNMSzWaZCO2VP67E8SNydTXAo3g1oHdVZAFMLU5Pry8aZAab2FbVnFQAjxUmPE9AlGSHYx8aTGKuH9DB98hY3IWEYXZCGotBCEfZAAZB3JIBwRav5rLWP4NbCacZAVvI0TgCXPnp8j0r0lagkn3oiHDiViXi4EelKZAY4lh301ZAi1OBpp7FKVQZDZD",
+    "phone_number_id": "1045411721989479",
+    "recipient": [
+      "4915906011396",
+      "4915115896523"
+    ]
   }
 }

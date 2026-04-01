@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ResellingBot — Log</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="card log-page-card">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-title">
+          <svg
+            class="logo-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 21V9" />
+          </svg>
+          <h1>Bot Log</h1>
+        </div>
+        <a href="/" class="btn-set" style="text-decoration: none"
+          >← Dashboard</a
+        >
+      </div>
+
+      <!-- Controls -->
+      <div class="log-toolbar">
+        <div class="log-toolbar-left">
+          <label class="log-lines-label">
+            Lines:
+            <select id="linesSelect" class="log-lines-select">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="250">250</option>
+              <option value="500">500</option>
+            </select>
+          </label>
+          <label class="autoscroll-label">
+            <input type="checkbox" id="logAutoScroll" checked /> Auto-scroll
+          </label>
+        </div>
+        <button id="clearLogBtn" class="btn-danger">Clear log</button>
+      </div>
+
+      <!-- Log box -->
+      <div class="log-box" id="logBox"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='log.js') }}" defer></script>
+  </body>
+</html>

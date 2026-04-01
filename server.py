@@ -90,6 +90,12 @@ def index():
     return render_template("index.html")
 
 
+# Serves the log viewer page.
+@app.route("/log")
+def log_page():
+    return render_template("log.html")
+
+
 # Returns current bot state: running flag, check interval, and seconds until the next run.
 @app.route("/api/status")
 def api_status():
@@ -249,9 +255,33 @@ def api_seen_clear():
     return jsonify({"ok": True})
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+# Returns the last N lines of the bot log file.
+@app.route("/api/logs")
+def api_logs():
+    lines = int(request.args.get("lines", 100))
+    log_file = _config.get("settings", {}).get("log_file", "logs/bot.log")
+    log_path = CONFIG_FILE.parent / log_file
+    if not log_path.exists():
+        return jsonify({"lines": []})
+    try:
+        with log_path.open(encoding="utf-8", errors="replace") as f:
+            all_lines = f.readlines()
+        return jsonify({"lines": [l.rstrip() for l in all_lines[-lines:]]})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# Clears the bot log file.
+@app.route("/api/logs/clear", methods=["POST"])
+def api_logs_clear():
+    log_file = _config.get("settings", {}).get("log_file", "logs/bot.log")
+    log_path = CONFIG_FILE.parent / log_file
+    try:
+        log_path.write_text("", encoding="utf-8")
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    return jsonify({"ok": True})
+
 
 if __name__ == "__main__":
     _config = load_config()

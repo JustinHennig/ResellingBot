@@ -12,19 +12,51 @@ logger = logging.getLogger(__name__)
 # Serialize Groq calls across threads to avoid hitting rate limits
 _groq_lock = threading.Lock()
 
-# Model — llama-3.1-8b-instant uses ~5x fewer tokens than 70b, fast enough for scoring
-_GROQ_MODEL = "llama-3.1-8b-instant"
+# Model — llama-3.3-70b-versatile gives significantly better judgment for condition/originality scoring
+_GROQ_MODEL = "llama-3.3-70b-versatile"
 
-# System message sent once per call (not repeated in the user message)
-_SYSTEM = (
-    "You score second-hand electronics listings for resale value. "
-    "Reply with ONLY valid JSON: {\"score\":<1-10>,\"warning\":\"<empty or 1 short phrase>\"}. "
-    "Score guide: 10=mint/all-original, 7-8=good/minor wear, 5-6=average, 3-4=damage or overpriced, 1-2=heavy damage/locked/parts replaced. "
-    "Warning: mention only if screen, battery, or parts were replaced/non-original. Empty string otherwise."
-)
+# System prompt: detailed scoring rubric and strict JSON output format
+_SYSTEM = """You are an expert at evaluating second-hand smartphone and electronics listings on German classifieds sites for resale profitability.
 
-# Compact user message — description capped at 350 chars
-_USER_TEMPLATE = "Title: {title}\nPrice: {price} EUR{vb}\nDesc: {description}"
+Your job is to score how good the listing is for someone who wants to BUY it cheap and RESELL it for profit.
+
+Always respond with ONLY valid JSON in this exact format (no markdown, no explanation):
+{"score": <integer 1-10>, "warning": "<string>"}
+
+SCORING GUIDE:
+10 — Mint / like new condition, full original accessories included, all original parts, well-priced, no red flags
+8-9 — Good condition, minor cosmetic wear only, original parts, reasonable price for resale margin
+6-7 — Average condition, visible scratches or dents, missing some accessories, still resellable
+4-5 — Noticeable damage (cracked back, deep scratches), or price is too high for the described condition
+2-3 — Significant damage (bent frame, dead pixels, heavy scratches), non-original parts, or very overpriced
+1   — Basically unsellable: iCloud/Google locked, completely broken, water damage, parts-only device
+
+FACTORS THAT LOWER THE SCORE:
+- Screen replaced (especially non-original display)
+- Battery replaced with non-original part
+- Third-party repairs mentioned
+- Missing charger, cable, or original box (minor deduction)
+- Seller says "Verkaufe auf Probe" or vague condition
+- Price leaves no resale margin
+- Device is locked (iCloud, Google account, Netzsperre)
+- Water or display damage
+
+FACTORS THAT RAISE THE SCORE:
+- "Neuwertig", "wie neu", "TOP Zustand", "1a Zustand"
+- Original accessories included (Ladekabel, Box, etc.)
+- Original battery and parts
+- Clear photos described or detailed honest description
+- Price significantly below market value
+
+WARNING FIELD:
+- If screen, battery, or any internal part was replaced or is non-original, briefly describe it in German (e.g. "Display ersetzt (kein Original)", "Akku getauscht")
+- If the device might be locked or has account issues, mention it (e.g. "Mögliche iCloud-Sperre")
+- Leave the warning field as an empty string "" if everything appears original and unmodified"""
+
+# User message — description capped at 600 chars for better context with the stronger model
+_USER_TEMPLATE = """Title: {title}
+Price: {price} EUR{vb}
+Description: {description}"""
 
 
 # Calls Groq API and returns (score, warning). Returns (None, "") on any failure.
@@ -40,8 +72,8 @@ def score_listing(listing, api_key: str) -> tuple:
         logger.warning("Groq API key not configured — skipping AI score")
         return None, ""
 
-    # Truncate description to keep token usage low — 350 chars captures all condition info
-    description = (listing.description or "")[:350] or "Keine Beschreibung"
+    # 600 chars gives the stronger model enough context to make accurate condition judgments
+    description = (listing.description or "")[:600] or "Keine Beschreibung"
     vb_suffix = " (VB)" if listing.negotiable else ""
     price_str = str(listing.price) if listing.price is not None else "Preis auf Anfrage"
 
@@ -65,7 +97,7 @@ def score_listing(listing, api_key: str) -> tuple:
                         {"role": "user", "content": user_msg},
                     ],
                     temperature=0,
-                    max_tokens=60,
+                    max_tokens=120,
                 )
                 raw = chat.choices[0].message.content.strip()
                 break  # success
