@@ -10,70 +10,76 @@ WA_API_URL = "https://graph.facebook.com/v22.0"
 
 
 # Sends a WhatsApp text message via the Meta Cloud API.
+# recipient can be a single number string or a list of number strings.
 def send_whatsapp_message(wa_config: dict, body: str) -> bool:
     token = wa_config["token"]
     phone_number_id = wa_config["phone_number_id"]
-    recipient = wa_config["recipient"]
+    raw = wa_config["recipient"]
+    recipients = raw if isinstance(raw, list) else [raw]
 
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": recipient,
-        "type": "text",
-        "text": {"body": body},
-    }
-
-    try:
-        response = requests.post(
-            f"{WA_API_URL}/{phone_number_id}/messages",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=10,
-        )
-        if response.status_code == 200:
-            return True
-        logger.error(f"WhatsApp notification failed: HTTP {response.status_code} — {response.text[:200]}")
-        return False
-    except requests.RequestException as e:
-        logger.error(f"WhatsApp notification request failed: {e}")
-        return False
+    success = True
+    for recipient in recipients:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": recipient,
+            "type": "text",
+            "text": {"body": body},
+        }
+        try:
+            response = requests.post(
+                f"{WA_API_URL}/{phone_number_id}/messages",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=10,
+            )
+            if response.status_code != 200:
+                logger.error(f"WhatsApp notification failed for {recipient}: HTTP {response.status_code} — {response.text[:200]}")
+                success = False
+        except requests.RequestException as e:
+            logger.error(f"WhatsApp notification request failed for {recipient}: {e}")
+            success = False
+    return success
 
 
 # Sends a WhatsApp image message with caption via the Meta Cloud API.
+# recipient can be a single number string or a list of number strings.
 def send_whatsapp_image(wa_config: dict, image_url: str, caption: str) -> bool:
     token = wa_config["token"]
     phone_number_id = wa_config["phone_number_id"]
-    recipient = wa_config["recipient"]
+    raw = wa_config["recipient"]
+    recipients = raw if isinstance(raw, list) else [raw]
 
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": recipient,
-        "type": "image",
-        "image": {
-            "link": image_url,
-            "caption": caption[:1024],  # WhatsApp caption limit
-        },
-    }
-
-    try:
-        response = requests.post(
-            f"{WA_API_URL}/{phone_number_id}/messages",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
+    success = True
+    for recipient in recipients:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": recipient,
+            "type": "image",
+            "image": {
+                "link": image_url,
+                "caption": caption[:1024],  # WhatsApp caption limit
             },
-            json=payload,
-            timeout=10,
-        )
-        if response.status_code == 200:
-            return True
-        logger.warning(f"WhatsApp image send failed: HTTP {response.status_code} — {response.text[:200]}")
-        return False
-    except requests.RequestException as e:
-        logger.warning(f"WhatsApp image request failed: {e}")
-        return False
+        }
+        try:
+            response = requests.post(
+                f"{WA_API_URL}/{phone_number_id}/messages",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=10,
+            )
+            if response.status_code != 200:
+                logger.warning(f"WhatsApp image send failed for {recipient}: HTTP {response.status_code} — {response.text[:200]}")
+                success = False
+        except requests.RequestException as e:
+            logger.warning(f"WhatsApp image request failed for {recipient}: {e}")
+            success = False
+    return success
 
 
 # Returns formatted WhatsApp message body for a listing.
