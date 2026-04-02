@@ -1,6 +1,10 @@
 # ResellingBot — Kleinanzeigen Monitor
 
-Überwacht Kleinanzeigen automatisch und sendet Telegram-Benachrichtigungen bei guten Handyangeboten.
+Überwacht Kleinanzeigen automatisch und sendet WhatsApp-Benachrichtigungen bei guten Wiederverkaufsangeboten für Smartphones. Unterstützt iPhone 12–16e, Samsung S21–S25 / A-Serie und Google Pixel 7–9.
+
+Benachrichtigungen werden über die **Meta WhatsApp Cloud API** versendet. Optional bewertet eine **Groq AI** (llama-3.3-70b-versatile) jedes Inserat mit einem Wiederverkaufscore (1–10) und warnt vor nicht-originalen Ersatzteilen.
+
+Die Oberfläche ist ein lokales Web-Dashboard — kein separates Tool notwendig.
 
 ---
 
@@ -12,48 +16,67 @@
 pip install -r requirements.txt
 ```
 
-### 2. WhatsApp-Benachrichtigungen einrichten (CallMeBot)
+### 2. credentials.json anlegen
 
-CallMeBot ist ein kostenloser Dienst, der dir WhatsApp-Nachrichten senden kann.
-
-**Einmalige Aktivierung:**
-
-1. Speichere folgende Nummer in deinen Kontakten: **+34 644 59 84 13** (Name z.B. „CallMeBot")
-2. Schicke dieser Nummer auf WhatsApp die Nachricht:  
-   `I allow callmebot to send me messages`
-3. Du erhältst eine Antwort mit deinem persönlichen **API-Key** (z.B. `1234567`)
-4. Trage deine Handynummer (mit Ländervorwahl, ohne `+`, z.B. `4917612345678`) und den API-Key in `config.json` ein
-
-### 3. config.json konfigurieren
+Erstelle eine Datei `credentials.json` im Projektordner (wird von Git ignoriert):
 
 ```json
 {
+  "groq_api_key": "dein-groq-api-key",
   "whatsapp": {
-    "phone": "4917612345678",
-    "api_key": "1234567"
-  },
-  "searches": [
-    {
-      "name": "iPhone 13",
-      "query": "iphone 13",
-      "max_price": 350,
-      "min_price": 50,
-      "keywords_required": [],
-      "keywords_blocked": ["defekt", "bastler", "ersatzteil"],
-      "enabled": true
-    }
-  ],
-  "settings": {
-    "check_interval_minutes": 5
+    "token": "dein-meta-access-token",
+    "phone_number_id": "deine-phone-number-id",
+    "recipient": ["4917612345678"]
   }
 }
 ```
 
+- **WhatsApp**: Access Token und Phone Number ID erhältst du im [Meta Developer Portal](https://developers.facebook.com/) unter deiner WhatsApp Business App.
+- **Groq API Key**: Kostenlos auf [console.groq.com](https://console.groq.com) erstellen. Wenn kein Key angegeben wird, läuft der Bot ohne KI-Scoring.
+- `recipient` kann ein einzelner String oder eine Liste von Nummern sein (Ländervorwahl ohne `+`, z.B. `4917612345678`).
+
+### 3. config.json anpassen
+
+`config.json` enthält alle Suchen und allgemeinen Einstellungen. Die Datei ist bereits mit gängigen iPhone-, Samsung- und Pixel-Modellen vorkonfiguriert. Suchen können einzeln aktiviert/deaktiviert werden.
+
+```json
+{
+  "searches": [
+    {
+      "name": "iPhone 13",
+      "query": "iphone 13",
+      "max_price": 130,
+      "min_price": 35,
+      "keywords_blocked": ["mini", "pro"],
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "check_interval_minutes": 2,
+    "max_workers": 6,
+    "seen_listings_file": "data/seen_listings.json",
+    "log_file": "logs/bot.log",
+    "keywords_blocked": [
+      "defekt",
+      "bastler",
+      "ersatzteil",
+      "gesperrt",
+      "icloud"
+    ]
+  },
+  "whatsapp": {}
+}
+```
+
+> Sensitive Felder (`token`, `phone_number_id`, `recipient`, `groq_api_key`) gehören in `credentials.json`, nicht in `config.json`.
+
 ### 4. Bot starten
 
 ```bash
-python main.py
+python server.py
 ```
+
+Öffne dann **http://localhost:5000** im Browser. Über das Dashboard kannst du den Bot starten/stoppen, das Prüfintervall ändern und einzelne Suchen ein-/ausschalten.
 
 ---
 
@@ -61,23 +84,38 @@ python main.py
 
 ### Suche (`searches[]`)
 
-| Feld                | Beschreibung                                       | Beispiel                |
-| ------------------- | -------------------------------------------------- | ----------------------- |
-| `name`              | Anzeigename in Benachrichtigungen                  | `"iPhone 13"`           |
-| `query`             | Suchbegriff für Kleinanzeigen                      | `"iphone 13 256gb"`     |
-| `max_price`         | Maximaler Preis in € (0 = kein Limit)              | `350`                   |
-| `min_price`         | Minimaler Preis in € (zum Ausfiltern von Spam)     | `50`                    |
-| `keywords_required` | Alle diese Keywords müssen im Titel/Text vorkommen | `["256gb"]`             |
-| `keywords_blocked`  | Listings mit diesen Keywords werden ignoriert      | `["defekt", "bastler"]` |
-| `enabled`           | Suche an/aus                                       | `true`                  |
+| Feld                | Beschreibung                                         | Beispiel          |
+| ------------------- | ---------------------------------------------------- | ----------------- |
+| `name`              | Anzeigename in Benachrichtigungen                    | `"iPhone 13"`     |
+| `query`             | Suchbegriff für Kleinanzeigen                        | `"iphone 13"`     |
+| `max_price`         | Maximaler Preis in € (0 = kein Limit)                | `130`             |
+| `min_price`         | Minimaler Preis in € (filtert Spam-Inserate)         | `35`              |
+| `keywords_required` | Alle Keywords müssen im Titel/Beschreibung vorkommen | `["256gb"]`       |
+| `keywords_blocked`  | Inserate mit diesen Keywords werden übersprungen     | `["mini", "pro"]` |
+| `enabled`           | Suche aktiviert/deaktiviert                          | `true`            |
 
 ### Einstellungen (`settings`)
 
-| Feld                     | Beschreibung                        | Standard             |
-| ------------------------ | ----------------------------------- | -------------------- |
-| `check_interval_minutes` | Wie oft geprüft wird                | `5`                  |
-| `seen_listings_file`     | Datei für bereits gesehene Angebote | `seen_listings.json` |
-| `log_file`               | Logdatei                            | `bot.log`            |
+| Feld                     | Beschreibung                                              | Standard                   |
+| ------------------------ | --------------------------------------------------------- | -------------------------- |
+| `check_interval_minutes` | Prüfintervall in Minuten                                  | `2`                        |
+| `max_workers`            | Parallele Such-Threads                                    | `6`                        |
+| `seen_listings_file`     | Pfad zur Datei mit bereits gesehenen IDs                  | `data/seen_listings.json`  |
+| `log_file`               | Pfad zur Logdatei                                         | `logs/bot.log`             |
+| `keywords_blocked`       | Globale Blacklist — gilt für alle Suchen                  | `["defekt", "bastler", …]` |
+| `groq_api_key`           | Groq API Key (alternativ in `credentials.json` eintragen) | `""`                       |
+
+---
+
+## Funktionsweise
+
+- Pro Prüfzyklus werden bis zu **3 Seiten** Suchergebnisse gescannt — es werden nur Inserate der letzten 30 Minuten weiterverarbeitet.
+- Alle Suchen laufen **parallel** (Thread Pool mit `max_workers` Threads).
+- Für jedes vielversprechende Inserat wird die **Detailseite** aufgerufen, um die vollständige Beschreibung und das Konto-Erstellungsdatum des Verkäufers zu lesen.
+- **Neues Verkäuferkonto** (heute oder gestern erstellt) → Inserat wird übersprungen.
+- Optional bewertet die **Groq AI** das Inserat mit einem Score von 1–10 und gibt eine Warnung aus, falls Displaytausch, Akkutausch oder andere Modifikationen erkannt werden.
+- Benachrichtigungen werden als WhatsApp-Nachricht mit Bild versendet; bei fehlender Abbildung nur als Text.
+- `data/seen_listings.json` speichert bereits gesehene IDs mit Zeitstempel. Einträge älter als 30 Tage werden automatisch bereinigt.
 
 ---
 
@@ -85,20 +123,31 @@ python main.py
 
 ```
 ResellingBot/
-├── main.py             — Hauptprogramm & Scheduler
-├── scraper.py          — Kleinanzeigen-Scraper & Angebotsfilter
-├── notifier.py         — Telegram-Benachrichtigungen
-├── config.json         — Deine Konfiguration
-├── requirements.txt    — Python-Abhängigkeiten
-├── seen_listings.json  — Automatisch erstellt; bereits gesehene IDs
-└── bot.log             — Automatisch erstellt; Logdatei
+├── server.py               — Flask-Webserver & Bot-Steuerung (Einstiegspunkt)
+├── config.json             — Suchen, Einstellungen, WhatsApp-Platzhalter
+├── credentials.json        — Sensitive Zugangsdaten (gitignored)
+├── requirements.txt        — Python-Abhängigkeiten
+├── bot/
+│   ├── main.py             — Orchestrierung, Config-Laden, Seen-Listings
+│   ├── scraper.py          — Kleinanzeigen-Scraper & Angebotsfilter
+│   ├── notifier.py         — WhatsApp Cloud API Benachrichtigungen
+│   └── ai_scorer.py        — Groq AI Scoring (1–10)
+├── frontend/
+│   ├── index.html          — Dashboard (Start/Stop, Suchen, Status)
+│   ├── log.html / log.js   — Log-Viewer
+│   ├── main.js             — Dashboard-Logik
+│   └── style.css           — Styles
+├── data/
+│   └── seen_listings.json  — Automatisch erstellt; bereits gesehene IDs
+└── logs/
+    └── bot.log             — Automatisch erstellt; Logdatei
 ```
 
 ---
 
 ## Hinweise
 
-- Der Bot prüft nur die **erste Suchergebnisseite** (neueste Angebote zuerst)
-- `seen_listings.json` verhindert Doppel-Benachrichtigungen, auch nach Neustart
-- Beim ersten Start werden alle aktuell vorhandenen Angebote als "gesehen" markiert — nur _neue_ Angebote lösen Benachrichtigungen aus
-- Respektiere die Nutzungsbedingungen von Kleinanzeigen; zu kurze Intervalle können zu temporären Sperren führen (empfohlen: ≥ 5 Minuten)
+- `data/seen_listings.json` verhindert Doppel-Benachrichtigungen, auch nach Neustart.
+- Beim ersten Start werden alle aktuell vorhandenen Inserate als „gesehen" markiert — nur _neue_ Inserate lösen Benachrichtigungen aus.
+- Respektiere die Nutzungsbedingungen von Kleinanzeigen. Zu kurze Prüfintervalle können zu temporären Sperren führen (empfohlen: ≥ 2 Minuten).
+- Der Meta WhatsApp Cloud API Access Token läuft nach 24 Stunden ab, wenn er aus einem Test-System stammt. Für dauerhaften Betrieb einen permanenten System User Token verwenden.

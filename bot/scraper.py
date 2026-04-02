@@ -76,8 +76,9 @@ class Listing:
     image_url: str
     posted_at: Optional[datetime] = None
     negotiable: bool = False  # True when the price has "VB" (Verhandlungsbasis)
-    ai_score: Optional[int] = None  # 1-10 resale value score from Gemini (None = not scored)
-    ai_warning: str = ""  # Non-empty when Gemini detected non-original parts or modifications
+    ai_score: Optional[int] = None  # 1-10 resale value score from Groq (None = not scored)
+    ai_warning: str = ""  # Non-empty when Groq detected non-original parts or modifications
+    market_price: Optional[int] = None  # Median eBay sold price in EUR (None = not fetched)
 
 
 # Builds the Kleinanzeigen search URL.
@@ -304,7 +305,7 @@ def fetch_listing_details(listing_url: str) -> tuple[str, Optional[datetime]]:
     html = re.sub(r'&#(\d+)(?!;)', r'&#\1;', response.text)
 
     # Detect the GDPR consent wall — if we got it, the cookie bypass failed
-    if "ANON_CONSENT" in html or "Datenschutzeinstellungen" in html and "viewad" not in html:
+    if ("ANON_CONSENT" in html or "Datenschutzeinstellungen" in html) and "viewad" not in html:
         logger.warning("Got GDPR consent wall on detail page — seller date check unavailable")
         return "", None
 
@@ -346,7 +347,9 @@ def is_new_seller(join_date: Optional[datetime]) -> bool:
 
 # Checks whether a listing matches the configured criteria.
 # Returns (is_good, reason_string).
-def is_good_deal(listing: Listing, search_config: dict, global_blocked: list[str] = []) -> tuple[bool, str]:
+def is_good_deal(listing: Listing, search_config: dict, global_blocked: Optional[list[str]] = None) -> tuple[bool, str]:
+    if global_blocked is None:
+        global_blocked = []
     min_price = search_config.get("min_price", 0)
     max_price = search_config.get("max_price", 0)
     keywords_required: list[str] = search_config.get("keywords_required", [])
@@ -370,10 +373,17 @@ def is_good_deal(listing: Listing, search_config: dict, global_blocked: list[str
             return False, f"Gesperrtes Keyword gefunden: '{kw}'"
 
     # Verify listing is actually about the searched product:
-    # all words from the query must appear as whole words in the listing text
+    # all words from the query must appear as whole words in the listing text.
+    # For numeric words (e.g. "16" in "iphone 16"), exclude matches that are
+    # immediately followed by "GB" or "TB" so a storage size like "16 GB" doesn't
+    # fool the bot into thinking it found an iPhone 16.
     query_words = search_config.get("query", "").lower().split()
     for word in query_words:
-        if not re.search(rf'\b{re.escape(word)}\b', text):
+        if word.isdigit():
+            pattern = rf'\b{re.escape(word)}\b(?!\s*(?:gb|tb))'
+        else:
+            pattern = rf'\b{re.escape(word)}\b'
+        if not re.search(pattern, text):
             return False, f"Suchwort '{word}' nicht im Inserat gefunden"
 
     # Required keywords

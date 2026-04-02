@@ -97,6 +97,11 @@ def format_listing_message(listing: Listing, search_name: str) -> str:
 
     lines.append(price_str)
 
+    # Margin line, e.g. "📈 Marge: ~60€ (Marktwert ~380€)"
+    if listing.market_price is not None and listing.price is not None:
+        margin = listing.market_price - listing.price
+        lines.append(f"📈 Marge: ~{margin}€ (Marktwert ~{listing.market_price}€)")
+
     # AI warning for non-original/modified parts
     if listing.ai_warning:
         lines.append(f"⚠️ {listing.ai_warning}")

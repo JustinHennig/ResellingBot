@@ -6,6 +6,7 @@ import logging
 import re
 import threading
 import time
+from groq import Groq
 
 logger = logging.getLogger(__name__)
 
@@ -16,58 +17,52 @@ _groq_lock = threading.Lock()
 _GROQ_MODEL = "llama-3.3-70b-versatile"
 
 # System prompt: detailed scoring rubric and strict JSON output format
-_SYSTEM = """You are an expert at evaluating second-hand smartphone and electronics listings on German classifieds sites for resale profitability.
+_SYSTEM = """Du bist ein Experte für die Bewertung von Gebrauchthandy-Inseraten auf deutschen Kleinanzeigenportalen im Hinblick auf Wiederverkaufsgewinn.
 
-Your job is to score how good the listing is for someone who wants to BUY it cheap and RESELL it for profit.
+Deine Aufgabe ist es, zu bewerten, wie gut ein Inserat für jemanden ist, der das Gerät günstig KAUFEN und mit Gewinn WIEDERVERKAUFEN möchte.
 
-Always respond with ONLY valid JSON in this exact format (no markdown, no explanation):
-{"score": <integer 1-10>, "warning": "<string>"}
+Antworte ausschließlich mit validem JSON in genau diesem Format (kein Markdown, keine Erklärung):
+{"score": <ganze Zahl 1-10>, "warning": "<string>"}
 
-SCORING GUIDE:
-10 — Mint / like new condition, full original accessories included, all original parts, well-priced, no red flags
-8-9 — Good condition, minor cosmetic wear only, original parts, reasonable price for resale margin
-6-7 — Average condition, visible scratches or dents, missing some accessories, still resellable
-4-5 — Noticeable damage (cracked back, deep scratches), or price is too high for the described condition
-2-3 — Significant damage (bent frame, dead pixels, heavy scratches), non-original parts, or very overpriced
-1   — Basically unsellable: iCloud/Google locked, completely broken, water damage, parts-only device
+BEWERTUNGSSKALA:
+10 — Neuwertig / wie neu, vollständiges Originalzubehör, alle Originalteile, guter Preis, keine Warnsignale
+8-9 — Guter Zustand, nur leichte Gebrauchsspuren, Originalteile, ausreichende Gewinnmarge
+6-7 — Durchschnittlicher Zustand, sichtbare Kratzer oder Dellen, Zubehör fehlt teilweise, noch weiterverkäuflich
+4-5 — Deutliche Schäden (gerissene Rückseite, tiefe Kratzer) oder Preis zu hoch für den beschriebenen Zustand
+2-3 — Erhebliche Schäden (verbogener Rahmen, tote Pixel, starke Kratzer), Nicht-Originalteile oder stark überteuert
+1   — Praktisch unverkäuflich: iCloud-/Google-gesperrt, komplett defekt, Wasserschaden, Gerät nur für Ersatzteile
 
-FACTORS THAT LOWER THE SCORE:
-- Screen replaced (especially non-original display)
-- Battery replaced with non-original part
-- Third-party repairs mentioned
-- Missing charger, cable, or original box (minor deduction)
-- Seller says "Verkaufe auf Probe" or vague condition
-- Price leaves no resale margin
-- Device is locked (iCloud, Google account, Netzsperre)
-- Water or display damage
+FAKTOREN DIE DEN SCORE SENKEN:
+- Display ausgetauscht (besonders kein Original-Display)
+- Akku durch Nicht-Originalteil ersetzt
+- Drittanbieter-Reparaturen erwähnt
+- Ladekabel, Kabel oder Originalverpackung fehlt (kleine Abwertung)
+- Verkäufer schreibt „Verkaufe auf Probe" oder beschreibt Zustand vage
+- Preis lässt keine Gewinnmarge
+- Gerät gesperrt (iCloud, Google-Konto, Netzsperre)
+- Wasser- oder Displayschaden
 
-FACTORS THAT RAISE THE SCORE:
-- "Neuwertig", "wie neu", "TOP Zustand", "1a Zustand"
-- Original accessories included (Ladekabel, Box, etc.)
-- Original battery and parts
-- Clear photos described or detailed honest description
-- Price significantly below market value
+FAKTOREN DIE DEN SCORE ERHÖHEN:
+- „Neuwertig", „wie neu", „TOP Zustand", „1a Zustand"
+- Originalzubehör vorhanden (Ladekabel, Box usw.)
+- Originalakku und -teile
+- Detaillierte, ehrliche Beschreibung oder klare Fotos beschrieben
+- Preis deutlich unter Marktwert
 
-WARNING FIELD:
-- If screen, battery, or any internal part was replaced or is non-original, briefly describe it in German (e.g. "Display ersetzt (kein Original)", "Akku getauscht")
-- If the device might be locked or has account issues, mention it (e.g. "Mögliche iCloud-Sperre")
-- Leave the warning field as an empty string "" if everything appears original and unmodified"""
+WARNUNGSFELD:
+- Falls Display, Akku oder ein anderes internes Bauteil ausgetauscht wurde oder kein Original ist, kurz auf Deutsch beschreiben (z.B. „Display ersetzt (kein Original)", „Akku getauscht")
+- Falls das Gerät möglicherweise gesperrt ist oder Kontoprobleme bestehen, erwähnen (z.B. „Mögliche iCloud-Sperre")
+- Warnungsfeld leer lassen („") wenn alles original und unverändert wirkt"""
 
 # User message — description capped at 600 chars for better context with the stronger model
-_USER_TEMPLATE = """Title: {title}
-Price: {price} EUR{vb}
-Description: {description}"""
+_USER_TEMPLATE = """Titel: {title}
+Preis: {price} EUR{vb}{market_line}
+Beschreibung: {description}"""
 
 
 # Calls Groq API and returns (score, warning). Returns (None, "") on any failure.
-def score_listing(listing, api_key: str) -> tuple:
-    # Import here so the package is only needed when AI scoring is enabled
-    try:
-        from groq import Groq
-    except ImportError:
-        logger.warning("groq not installed. Run: pip install groq")
-        return None, ""
-
+# market_price: optional eBay median sold price in EUR to help the AI judge margin.
+def score_listing(listing, api_key: str, market_price: int | None = None) -> tuple:
     if not api_key:
         logger.warning("Groq API key not configured — skipping AI score")
         return None, ""
@@ -77,10 +72,17 @@ def score_listing(listing, api_key: str) -> tuple:
     vb_suffix = " (VB)" if listing.negotiable else ""
     price_str = str(listing.price) if listing.price is not None else "Preis auf Anfrage"
 
+    if market_price is not None and listing.price is not None:
+        margin = market_price - listing.price
+        market_line = f"\nMarktwert auf eBay (Median): ~{market_price} EUR (geschätzte Marge: ~{margin} EUR)"
+    else:
+        market_line = ""
+
     user_msg = _USER_TEMPLATE.format(
         title=listing.title,
         price=price_str,
         vb=vb_suffix,
+        market_line=market_line,
         description=description,
     )
 
@@ -99,7 +101,7 @@ def score_listing(listing, api_key: str) -> tuple:
                     temperature=0,
                     max_tokens=120,
                 )
-                raw = chat.choices[0].message.content.strip()
+                raw = (chat.choices[0].message.content or "").strip()
                 break  # success
             except Exception as e:
                 err_str = str(e)

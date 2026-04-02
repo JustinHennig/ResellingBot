@@ -31,7 +31,7 @@
     {
       "name": "iPhone 12 Pro Max",
       "query": "iphone 12 pro max",
-      "max_price": 180,
+      "max_price": 170,
       "min_price": 35,
       "enabled": true
     },
@@ -462,7 +462,7 @@
     }
   ],
   "settings": {
-    "groq_api_key": "",
+    "groq_api_key": "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",
     "max_workers": 6,
     "check_interval_minutes": 2,
     "seen_listings_file": "data/seen_listings.json",

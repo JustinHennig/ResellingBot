@@ -59,8 +59,11 @@ def _bot_loop() -> None:
         # Signal that a run is in progress (no countdown while searching)
         _next_run_at = 0.0
 
+        with _lock:
+            config_snapshot = _config
+
         try:
-            run_all_searches(_config, _seen, _stop_event)
+            run_all_searches(config_snapshot, _seen, _stop_event)
         except Exception as exc:
             logger.error(f"Unhandled error in bot loop: {exc}", exc_info=True)
 
@@ -247,7 +250,7 @@ def api_seen_clear():
     seen_file = _config.get("settings", {}).get("seen_listings_file", "seen_listings.json")
     seen_path = CONFIG_FILE.parent / seen_file
     with _lock:
-        _seen = set()
+        _seen.clear()
     try:
         seen_path.write_text("{}", encoding="utf-8")
     except Exception as exc:

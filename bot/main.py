@@ -18,6 +18,7 @@ import schedule
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
 from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal, is_new_seller
 from bot.ai_scorer import score_listing
+from bot.market_pricer import get_market_price
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 CREDENTIALS_FILE = Path(__file__).parent.parent / "credentials.json"
@@ -59,6 +60,9 @@ def load_config() -> dict:
         # Merge groq_api_key into settings
         if creds.get("groq_api_key"):
             config.setdefault("settings", {})["groq_api_key"] = creds["groq_api_key"]
+        # Merge ebay_app_id into settings
+        if creds.get("ebay_app_id"):
+            config.setdefault("settings", {})["ebay_app_id"] = creds["ebay_app_id"]
         # Merge whatsapp block (deep merge — credentials values win)
         if creds.get("whatsapp"):
             config.setdefault("whatsapp", {}).update(
@@ -146,10 +150,10 @@ def check_search(
     global_blocked: list[str],
     stop_event,
     groq_api_key: str = "",
+    ebay_app_id: str = "",
 ) -> None:
     name = search_config.get("name", search_config.get("query", "?"))
     query = search_config.get("query", "")
-    max_price = search_config.get("max_price", 0)
 
     if not query:
         return
@@ -168,7 +172,7 @@ def check_search(
         listings.extend(page_listings)
         # If every dated listing on this page is older than the cutoff, no point going further
         dated = [l for l in page_listings if l.posted_at is not None]
-        if dated and all(l.posted_at < cutoff for l in dated):
+        if dated and all(l.posted_at is not None and l.posted_at < cutoff for l in dated):
             break
         if page > 0:
             time.sleep(1)
@@ -215,7 +219,9 @@ def check_search(
 
         # AI scoring — only runs if a Groq API key is configured
         if groq_api_key:
-            score, warning = score_listing(listing, groq_api_key)
+            market_price = get_market_price(query, ebay_app_id)
+            listing.market_price = market_price
+            score, warning = score_listing(listing, groq_api_key, market_price)
             listing.ai_score = score
             listing.ai_warning = warning
             logger.info(f"AI score for {listing.listing_id}: {score}/10 — warning: '{warning}'")
@@ -241,12 +247,13 @@ def run_all_searches(config: dict, seen: set[str], stop_event=None) -> None:
     global_blocked = config["settings"].get("keywords_blocked", [])
     max_workers = config["settings"].get("max_workers", 6)
     groq_api_key = config["settings"].get("groq_api_key", "")
+    ebay_app_id = config["settings"].get("ebay_app_id", "")
 
     active_searches = [s for s in config.get("searches", []) if s.get("enabled", True)]
 
     def _run(search):
         try:
-            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, groq_api_key)
+            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, groq_api_key, ebay_app_id)
         except Exception as e:
             logger.error(
                 f"Unexpected error in search '{search.get('name')}': {e}\n"
