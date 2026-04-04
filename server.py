@@ -210,7 +210,7 @@ def api_searches_toggle():
     return jsonify({"ok": True, "name": name, "enabled": new_state})
 
 
-# Updates the max_price for a search by name and persists the change to config.json.
+# Updates min_price and/or max_price for a search by name and persists the change to config.json.
 @app.route("/api/searches/price", methods=["POST"])
 def api_searches_price():
     data = request.get_json(silent=True) or {}
@@ -218,19 +218,25 @@ def api_searches_price():
     if not name:
         return jsonify({"ok": False, "error": "name required"}), 400
 
-    try:
-        max_price = int(data.get("max_price", 0))
-    except (TypeError, ValueError):
-        return jsonify({"ok": False, "error": "max_price must be a number"}), 400
+    updates = {}
+    for field in ("min_price", "max_price"):
+        if field in data:
+            try:
+                val = int(data[field])
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": f"{field} must be a number"}), 400
+            if val < 0:
+                return jsonify({"ok": False, "error": f"{field} must be ≥ 0"}), 400
+            updates[field] = val
 
-    if max_price < 0:
-        return jsonify({"ok": False, "error": "max_price must be ≥ 0"}), 400
+    if not updates:
+        return jsonify({"ok": False, "error": "min_price or max_price required"}), 400
 
     with _lock:
         found = False
         for s in _config.get("searches", []):
             if s.get("name") == name:
-                s["max_price"] = max_price
+                s.update(updates)
                 found = True
                 break
         if not found:
@@ -240,7 +246,48 @@ def api_searches_price():
         except Exception as exc:
             return jsonify({"ok": False, "error": str(exc)}), 500
 
-    return jsonify({"ok": True, "name": name, "max_price": max_price})
+    return jsonify({"ok": True, "name": name, **updates})
+
+
+# Adds a new search entry and persists it to config.json.
+@app.route("/api/searches/add", methods=["POST"])
+def api_searches_add():
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "name is required"}), 400
+
+    query = (data.get("query") or "").strip() or name.lower()
+
+    try:
+        min_price = int(data.get("min_price") or 0)
+        max_price = int(data.get("max_price") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "prices must be numbers"}), 400
+
+    if min_price < 0 or max_price < 0:
+        return jsonify({"ok": False, "error": "prices must be ≥ 0"}), 400
+
+    with _lock:
+        for s in _config.get("searches", []):
+            if s.get("name") == name:
+                return jsonify({"ok": False, "error": "A search with that name already exists"}), 409
+
+        new_search = {
+            "name": name,
+            "query": query,
+            "min_price": min_price,
+            "max_price": max_price,
+            "enabled": True,
+        }
+        _config.setdefault("searches", []).append(new_search)
+        try:
+            _save_config()
+        except Exception as exc:
+            _config["searches"].pop()
+            return jsonify({"ok": False, "error": str(exc)}), 500
+
+    return jsonify({"ok": True, "search": new_search})
 
 
 # Clears the seen listings in memory and on disk so the bot re-evaluates all listings.

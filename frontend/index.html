@@ -63,6 +63,7 @@
         <div class="section-header">
           <p class="section-label">Searches</p>
           <div style="display: flex; gap: 8px; align-items: center">
+            <button id="addSearchBtn" class="btn-set">+ Add</button>
             <a href="/log" class="btn-set" style="text-decoration: none"
               >View Log</a
             >
@@ -78,5 +79,65 @@
     </div>
 
     <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+
+    <!-- Add Search Modal -->
+    <div id="addSearchModal" class="modal-overlay" style="display: none">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title">Add Search</span>
+          <button class="modal-close" id="modalCloseBtn">&#x2715;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input
+              type="text"
+              id="newSearchName"
+              class="form-input"
+              placeholder="iPhone 14"
+              autocomplete="off"
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label"
+              >Query
+              <span class="form-hint">(leave blank to use name)</span></label
+            >
+            <input
+              type="text"
+              id="newSearchQuery"
+              class="form-input"
+              placeholder="iphone 14"
+              autocomplete="off"
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Min price (&#x20AC;)</label>
+              <input
+                type="number"
+                id="newSearchMinPrice"
+                class="form-input"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Max price (&#x20AC;)</label>
+              <input
+                type="number"
+                id="newSearchMaxPrice"
+                class="form-input"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-set" id="addSearchSubmitBtn">Add Search</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

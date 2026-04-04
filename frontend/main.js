@@ -87,9 +87,10 @@ function renderCountdown() {
   } else {
     const m = Math.floor(countdownSecs / 60);
     const s = countdownSecs % 60;
-    const time = m > 0
-      ? `<span>${m}m ${String(s).padStart(2, "0")}s</span>`
-      : `<span>${s}s</span>`;
+    const time =
+      m > 0
+        ? `<span>${m}m ${String(s).padStart(2, "0")}s</span>`
+        : `<span>${s}s</span>`;
     el.innerHTML = `Next run in ${time}`;
   }
 }
@@ -166,10 +167,12 @@ async function fetchSearches() {
     const res = await fetch("/api/searches");
     const searches = await res.json();
     renderSearches(searches);
-  } catch (_) { /* ignore */ }
+  } catch (_) {
+    /* ignore */
+  }
 }
 
-// Builds the search list DOM — one row per search with a name label, max-price input, and toggle.
+// Builds the search list DOM — one row per search with a name label, min/max price inputs, and toggle.
 function renderSearches(searches) {
   const list = document.getElementById("searchesList");
   list.innerHTML = "";
@@ -181,9 +184,17 @@ function renderSearches(searches) {
     nameEl.className = "search-name";
     nameEl.textContent = s.name;
 
-    // Max price input
+    // Min + Max price inputs
     const priceWrap = document.createElement("div");
     priceWrap.className = "price-inputs";
+
+    const minInput = document.createElement("input");
+    minInput.type = "number";
+    minInput.className = "price-input";
+    minInput.value = s.min_price || "";
+    minInput.placeholder = "min €";
+    minInput.title = "Min price (€)";
+    minInput.min = "0";
 
     const maxInput = document.createElement("input");
     maxInput.type = "number";
@@ -193,36 +204,44 @@ function renderSearches(searches) {
     maxInput.title = "Max price (€)";
     maxInput.min = "0";
 
+    priceWrap.appendChild(minInput);
     priceWrap.appendChild(maxInput);
 
-    // Save on blur or Enter
-    let _origMax = maxInput.value;
-    async function savePrice() {
-      const max = parseInt(maxInput.value) || 0;
-      if (String(max) === _origMax) return;
-      maxInput.classList.add("saving");
-      try {
-        const res = await fetch("/api/searches/price", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: s.name, max_price: max }),
-        });
-        const data = await res.json();
-        if (!data.ok) {
-          showToast(data.error || "Save failed", "error");
-          maxInput.value = _origMax;
-        } else {
-          _origMax = String(max);
-          showToast(`${s.name} max price updated`);
+    // Generic save handler — saves any single price field on blur or Enter
+    function makeSaveHandler(input, field) {
+      let orig = String(input.value);
+      async function save() {
+        const v = parseInt(input.value) || 0;
+        if (String(v) === orig) return;
+        input.classList.add("saving");
+        try {
+          const res = await fetch("/api/searches/price", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: s.name, [field]: v }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            showToast(data.error || "Save failed", "error");
+            input.value = orig;
+          } else {
+            orig = String(v);
+            showToast(`${s.name} updated`);
+          }
+        } catch (_) {
+          input.value = orig;
+        } finally {
+          input.classList.remove("saving");
         }
-      } catch (_) {
-        maxInput.value = _origMax;
-      } finally {
-        maxInput.classList.remove("saving");
       }
+      input.addEventListener("blur", save);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") input.blur();
+      });
     }
-    maxInput.addEventListener("blur", savePrice);
-    maxInput.addEventListener("keydown", e => { if (e.key === "Enter") maxInput.blur(); });
+
+    makeSaveHandler(minInput, "min_price");
+    makeSaveHandler(maxInput, "max_price");
 
     // Toggle switch
     const label = document.createElement("label");
@@ -230,7 +249,9 @@ function renderSearches(searches) {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = s.enabled;
-    checkbox.addEventListener("change", () => toggleSearch(s.name, checkbox, row));
+    checkbox.addEventListener("change", () =>
+      toggleSearch(s.name, checkbox, row),
+    );
     const slider = document.createElement("span");
     slider.className = "toggle-slider";
     label.appendChild(checkbox);
@@ -267,9 +288,122 @@ async function toggleSearch(name, checkbox, row) {
 }
 
 // ---------------------------------------------------------------------------
+// Add Search modal
+// ---------------------------------------------------------------------------
+
+function openAddModal() {
+  document.getElementById("newSearchName").value = "";
+  document.getElementById("newSearchQuery").value = "";
+  document.getElementById("newSearchMinPrice").value = "";
+  document.getElementById("newSearchMaxPrice").value = "";
+  document.getElementById("addSearchModal").style.display = "flex";
+  document.getElementById("newSearchName").focus();
+}
+
+function closeAddModal() {
+  document.getElementById("addSearchModal").style.display = "none";
+}
+
+async function addSearch() {
+  const name = document.getElementById("newSearchName").value.trim();
+  if (!name) {
+    showToast("Name is required", "error");
+    return;
+  }
+  const payload = {
+    name,
+    query: document.getElementById("newSearchQuery").value.trim(),
+    min_price:
+      parseInt(document.getElementById("newSearchMinPrice").value) || 0,
+    max_price:
+      parseInt(document.getElementById("newSearchMaxPrice").value) || 0,
+  };
+  const btn = document.getElementById("addSearchSubmitBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/searches/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast(data.error || "Add failed", "error");
+    } else {
+      closeAddModal();
+      showToast(`"${name}" added`);
+      fetchSearches();
+    }
+  } catch (_) {
+    showToast("Request failed", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Add Search modal
+// ---------------------------------------------------------------------------
+
+function openAddModal() {
+  document.getElementById("newSearchName").value = "";
+  document.getElementById("newSearchQuery").value = "";
+  document.getElementById("newSearchMinPrice").value = "";
+  document.getElementById("newSearchMaxPrice").value = "";
+  document.getElementById("addSearchModal").style.display = "flex";
+  document.getElementById("newSearchName").focus();
+}
+
+function closeAddModal() {
+  document.getElementById("addSearchModal").style.display = "none";
+}
+
+async function addSearch() {
+  const name = document.getElementById("newSearchName").value.trim();
+  if (!name) {
+    showToast("Name is required", "error");
+    return;
+  }
+  const payload = {
+    name,
+    query: document.getElementById("newSearchQuery").value.trim(),
+    min_price:
+      parseInt(document.getElementById("newSearchMinPrice").value) || 0,
+    max_price:
+      parseInt(document.getElementById("newSearchMaxPrice").value) || 0,
+  };
+  const btn = document.getElementById("addSearchSubmitBtn");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/searches/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      showToast(data.error || "Add failed", "error");
+    } else {
+      closeAddModal();
+      showToast(`"${name}" added`);
+      fetchSearches();
+    }
+  } catch (_) {
+    showToast("Request failed", "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Clears the seen listings file so the bot will re-check all listings.
 async function clearSeenListings() {
-  if (!confirm("Clear all seen listings? The bot will re-notify you about listings it has already seen.")) return;
+  if (
+    !confirm(
+      "Clear all seen listings? The bot will re-notify you about listings it has already seen.",
+    )
+  )
+    return;
   const res = await fetch("/api/seen/clear", { method: "POST" });
   const data = await res.json();
   if (data.ok) {
@@ -284,8 +418,27 @@ async function clearSeenListings() {
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("toggleBtn").addEventListener("click", toggleBot);
-  document.getElementById("setIntervalBtn").addEventListener("click", applyInterval);
-  document.getElementById("clearSeenBtn").addEventListener("click", clearSeenListings);
+  document
+    .getElementById("setIntervalBtn")
+    .addEventListener("click", applyInterval);
+  document
+    .getElementById("clearSeenBtn")
+    .addEventListener("click", clearSeenListings);
+  document
+    .getElementById("addSearchBtn")
+    .addEventListener("click", openAddModal);
+  document
+    .getElementById("modalCloseBtn")
+    .addEventListener("click", closeAddModal);
+  document
+    .getElementById("addSearchSubmitBtn")
+    .addEventListener("click", addSearch);
+  document.getElementById("addSearchModal").addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeAddModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAddModal();
+  });
 
   fetchStatus();
   fetchSearches();
