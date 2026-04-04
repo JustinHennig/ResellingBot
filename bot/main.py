@@ -18,7 +18,6 @@ import schedule
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
 from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal, is_new_seller
 from bot.ai_scorer import score_listing
-from bot.ebay_pricer import fetch_ebay_sold_price
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
 CREDENTIALS_FILE = Path(__file__).parent.parent / "credentials.json"
@@ -155,11 +154,6 @@ def check_search(
         return
 
     logger.info(f"Checking search: '{name}'")
-
-    # Fetch eBay.de sold price once per search cycle (not per listing) to avoid
-    # hammering eBay. All listings in this search share the same reference price.
-    ebay_sold_price = fetch_ebay_sold_price(name)
-
     cutoff = datetime.now() - timedelta(minutes=30)
 
     # Fetch pages until we hit a known listing ID (everything after it is already seen),
@@ -229,9 +223,6 @@ def check_search(
             if not good:
                 logger.info(f"Skipped listing {listing.listing_id} after full desc check: {reason}")
                 continue
-
-        # Attach the eBay reference price so both the AI scorer and notifier can use it
-        listing.ebay_sold_price = ebay_sold_price
 
         # AI scoring — only runs if a Groq API key is configured
         if groq_api_key:

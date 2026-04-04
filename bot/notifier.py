@@ -97,15 +97,6 @@ def format_listing_message(listing: Listing, search_name: str) -> str:
 
     lines.append(price_str)
 
-    # eBay sold price + estimated resale margin
-    if listing.ebay_sold_price is not None:
-        if listing.price is not None:
-            margin = listing.ebay_sold_price - listing.price
-            sign = "+" if margin >= 0 else ""
-            lines.append(f"📊 eBay-Verkaufspreis: ~{listing.ebay_sold_price}€ (Marge: {sign}{margin}€)")
-        else:
-            lines.append(f"📊 eBay-Verkaufspreis: ~{listing.ebay_sold_price}€")
-
     # AI warning for non-original/modified parts
     if listing.ai_warning:
         lines.append(f"⚠️ {listing.ai_warning}")

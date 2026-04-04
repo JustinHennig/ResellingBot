@@ -57,7 +57,7 @@ WARNUNGSFELD:
 # User message — description capped at 600 chars for better context with the stronger model
 _USER_TEMPLATE = """Titel: {title}
 Preis: {price} EUR{vb}
-Beschreibung: {description}{ebay_line}"""
+Beschreibung: {description}"""
 
 
 # Calls Groq API and returns (score, warning). Returns (None, "") on any failure.
@@ -71,15 +71,11 @@ def score_listing(listing, api_key: str) -> tuple:
     vb_suffix = " (VB)" if listing.negotiable else ""
     price_str = str(listing.price) if listing.price is not None else "Preis auf Anfrage"
 
-    ebay_sold = getattr(listing, "ebay_sold_price", None)
-    ebay_line = f"\neBay-Marktpreis (verkauft): {ebay_sold} EUR" if ebay_sold is not None else ""
-
     user_msg = _USER_TEMPLATE.format(
         title=listing.title,
         price=price_str,
         vb=vb_suffix,
         description=description,
-        ebay_line=ebay_line,
     )
 
     client = Groq(api_key=api_key)
