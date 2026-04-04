@@ -78,7 +78,7 @@ class Listing:
     negotiable: bool = False  # True when the price has "VB" (Verhandlungsbasis)
     ai_score: Optional[int] = None  # 1-10 resale value score from Groq (None = not scored)
     ai_warning: str = ""  # Non-empty when Groq detected non-original parts or modifications
-    market_price: Optional[int] = None  # Median eBay sold price in EUR (None = not fetched)
+    ebay_sold_price: Optional[int] = None  # Median eBay.de sold price for this search query (EUR)
 
 
 # Builds the Kleinanzeigen search URL.

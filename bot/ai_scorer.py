@@ -56,13 +56,12 @@ WARNUNGSFELD:
 
 # User message — description capped at 600 chars for better context with the stronger model
 _USER_TEMPLATE = """Titel: {title}
-Preis: {price} EUR{vb}{market_line}
-Beschreibung: {description}"""
+Preis: {price} EUR{vb}
+Beschreibung: {description}{ebay_line}"""
 
 
 # Calls Groq API and returns (score, warning). Returns (None, "") on any failure.
-# market_price: optional eBay median sold price in EUR to help the AI judge margin.
-def score_listing(listing, api_key: str, market_price: int | None = None) -> tuple:
+def score_listing(listing, api_key: str) -> tuple:
     if not api_key:
         logger.warning("Groq API key not configured — skipping AI score")
         return None, ""
@@ -72,18 +71,15 @@ def score_listing(listing, api_key: str, market_price: int | None = None) -> tup
     vb_suffix = " (VB)" if listing.negotiable else ""
     price_str = str(listing.price) if listing.price is not None else "Preis auf Anfrage"
 
-    if market_price is not None and listing.price is not None:
-        margin = market_price - listing.price
-        market_line = f"\nMarktwert auf eBay (Median): ~{market_price} EUR (geschätzte Marge: ~{margin} EUR)"
-    else:
-        market_line = ""
+    ebay_sold = getattr(listing, "ebay_sold_price", None)
+    ebay_line = f"\neBay-Marktpreis (verkauft): {ebay_sold} EUR" if ebay_sold is not None else ""
 
     user_msg = _USER_TEMPLATE.format(
         title=listing.title,
         price=price_str,
         vb=vb_suffix,
-        market_line=market_line,
         description=description,
+        ebay_line=ebay_line,
     )
 
     client = Groq(api_key=api_key)
