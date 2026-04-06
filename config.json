@@ -427,7 +427,7 @@
     {
       "name": "Google Pixel 9",
       "query": "pixel 9",
-      "max_price": 320,
+      "max_price": 290,
       "min_price": 35,
       "keywords_blocked": [
         "pro",
@@ -439,14 +439,14 @@
     {
       "name": "Google Pixel 9a",
       "query": "pixel 9a",
-      "max_price": 270,
+      "max_price": 200,
       "min_price": 35,
       "enabled": true
     },
     {
       "name": "Google Pixel 9 Pro",
       "query": "pixel 9 pro",
-      "max_price": 420,
+      "max_price": 370,
       "min_price": 35,
       "keywords_blocked": [
         "xl"
@@ -456,7 +456,7 @@
     {
       "name": "Google Pixel 9 Pro XL",
       "query": "pixel 9 pro xl",
-      "max_price": 480,
+      "max_price": 400,
       "min_price": 35,
       "enabled": true
     },
@@ -464,15 +464,16 @@
       "name": "Raspberry Pi 5",
       "query": "raspberry pi 5",
       "max_price": 90,
-      "min_price": 0,
+      "min_price": 25,
       "enabled": true
     }
   ],
   "settings": {
-    "max_workers": 6,
+    "max_workers": 3,
     "check_interval_minutes": 2,
     "seen_listings_file": "data/seen_listings.json",
     "log_file": "logs/bot.log",
+    "pricer_api_url": "http://localhost:8000",
     "keywords_blocked": [
       "defekt",
       "bastler",
@@ -488,6 +489,14 @@
       "platinenschaden",
       "kein versand",
       "nur abholung"
+    ]
+  },
+  "whatsapp": {
+    "token": "EAAdohj4yidYBRNMSzWaZCO2VP67E8SNydTXAo3g1oHdVZAFMLU5Pry8aZAab2FbVnFQAjxUmPE9AlGSHYx8aTGKuH9DB98hY3IWEYXZCGotBCEfZAAZB3JIBwRav5rLWP4NbCacZAVvI0TgCXPnp8j0r0lagkn3oiHDiViXi4EelKZAY4lh301ZAi1OBpp7FKVQZDZD",
+    "phone_number_id": "1045411721989479",
+    "recipient": [
+      "4915906011396",
+      "4915115896523"
     ]
   }
 }

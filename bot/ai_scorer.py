@@ -38,7 +38,8 @@ FAKTOREN DIE DEN SCORE SENKEN:
 - Drittanbieter-Reparaturen erwähnt
 - Ladekabel, Kabel oder Originalverpackung fehlt (kleine Abwertung)
 - Verkäufer schreibt „Verkaufe auf Probe" oder beschreibt Zustand vage
-- Preis lässt keine Gewinnmarge
+- Geschätzter Gewinn unter 10 EUR (kaum rentabel)
+- Negativer geschätzter Gewinn (Kaufpreis höher als eBay-Median → starke Abwertung)
 - Gerät gesperrt (iCloud, Google-Konto, Netzsperre)
 - Wasser- oder Displayschaden
 
@@ -47,7 +48,12 @@ FAKTOREN DIE DEN SCORE ERHÖHEN:
 - Originalzubehör vorhanden (Ladekabel, Box usw.)
 - Originalakku und -teile
 - Detaillierte, ehrliche Beschreibung oder klare Fotos beschrieben
-- Preis deutlich unter Marktwert
+- Geschätzter Gewinn über 30 EUR
+- Geschätzter Gewinn über 60 EUR (erheblicher Aufschlag)
+
+GEWINNBERECHNUNG (wenn geschätzter eBay-Verkaufspreis angegeben):
+- Liegt der Kaufpreis bereits nahe am oder über dem eBay-Median → Score entsprechend senken
+- Liegt der Kaufpreis stark unter dem eBay-Median → Score entsprechend erhöhen
 
 WARNUNGSFELD:
 - Falls Display, Akku oder ein anderes internes Bauteil ausgetauscht wurde oder kein Original ist, kurz auf Deutsch beschreiben (z.B. „Display ersetzt (kein Original)", „Akku getauscht")
@@ -56,7 +62,7 @@ WARNUNGSFELD:
 
 # User message — description capped at 600 chars for better context with the stronger model
 _USER_TEMPLATE = """Titel: {title}
-Preis: {price} EUR{vb}
+Preis: {price} EUR{vb}{sell_price_line}
 Beschreibung: {description}"""
 
 
@@ -71,10 +77,19 @@ def score_listing(listing, api_key: str) -> tuple:
     vb_suffix = " (VB)" if listing.negotiable else ""
     price_str = str(listing.price) if listing.price is not None else "Preis auf Anfrage"
 
+    # Include estimated eBay sell price and profit if available
+    if listing.estimated_sell_price is not None:
+        sell_price_line = f"\nGeschätzter eBay-Verkaufspreis (Median): {listing.estimated_sell_price:.0f} EUR"
+        if listing.estimated_profit is not None:
+            sell_price_line += f"\nGeschätzter Gewinn: {listing.estimated_profit:+d} EUR"
+    else:
+        sell_price_line = ""
+
     user_msg = _USER_TEMPLATE.format(
         title=listing.title,
         price=price_str,
         vb=vb_suffix,
+        sell_price_line=sell_price_line,
         description=description,
     )
 

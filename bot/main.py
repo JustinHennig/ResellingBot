@@ -12,7 +12,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
 from threading import Lock
+from typing import Optional
 
+import requests
 import schedule
 
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
@@ -24,6 +26,26 @@ CREDENTIALS_FILE = Path(__file__).parent.parent / "credentials.json"
 
 logger = logging.getLogger(__name__)
 _seen_lock = Lock()
+
+# ---------------------------------------------------------------------------
+# PricerBot API helper
+# ---------------------------------------------------------------------------
+
+# Fetches the latest median and avg eBay sold price for a phone model from the
+# PricerBot REST API.  Returns (avg_price, median_price) or (None, None) on any
+# failure (API unavailable, model not yet priced, network error).
+def fetch_price_estimate(model_name: str, pricer_api_url: str) -> tuple[Optional[float], Optional[float]]:
+    try:
+        url = f"{pricer_api_url.rstrip('/')}/price"
+        response = requests.get(url, params={"model": model_name}, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("avg_price"), data.get("median_price")
+        if response.status_code != 404:
+            logger.debug(f"PricerBot API returned HTTP {response.status_code} for '{model_name}'")
+    except requests.RequestException as e:
+        logger.debug(f"Could not reach PricerBot API for '{model_name}': {e}")
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +168,7 @@ def check_search(
     global_blocked: list[str],
     stop_event,
     groq_api_key: str = "",
+    pricer_api_url: str = "",
 ) -> None:
     name = search_config.get("name", search_config.get("query", "?"))
     query = search_config.get("query", "")
@@ -224,6 +247,15 @@ def check_search(
                 logger.info(f"Skipped listing {listing.listing_id} after full desc check: {reason}")
                 continue
 
+        # Fetch estimated eBay sell price from PricerBot API
+        if pricer_api_url:
+            _, median_price = fetch_price_estimate(name, pricer_api_url)
+            listing.estimated_sell_price = median_price
+            if listing.price is not None and median_price is not None:
+                listing.estimated_profit = round(median_price - listing.price)
+            if median_price is not None:
+                logger.info(f"Price estimate for '{name}': median {median_price:.0f} EUR, profit ~{listing.estimated_profit} EUR")
+
         # AI scoring — only runs if a Groq API key is configured
         if groq_api_key:
             score, warning = score_listing(listing, groq_api_key)
@@ -252,12 +284,13 @@ def run_all_searches(config: dict, seen: set[str], stop_event=None) -> None:
     global_blocked = config["settings"].get("keywords_blocked", [])
     max_workers = config["settings"].get("max_workers", 6)
     groq_api_key = config["settings"].get("groq_api_key", "")
+    pricer_api_url = config["settings"].get("pricer_api_url", "")
 
     active_searches = [s for s in config.get("searches", []) if s.get("enabled", True)]
 
     def _run(search):
         try:
-            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, groq_api_key)
+            check_search(search, seen, wa_config, seen_file, global_blocked, stop_event, groq_api_key, pricer_api_url)
         except Exception as e:
             logger.error(
                 f"Unexpected error in search '{search.get('name')}': {e}\n"

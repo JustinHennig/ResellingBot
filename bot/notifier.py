@@ -97,6 +97,14 @@ def format_listing_message(listing: Listing, search_name: str) -> str:
 
     lines.append(price_str)
 
+    # Estimated eBay sell price and profit from PricerBot
+    if listing.estimated_sell_price is not None:
+        sell_line = f"📊 eBay-Median: {listing.estimated_sell_price:.0f} EUR"
+        if listing.estimated_profit is not None:
+            profit_emoji = "💰" if listing.estimated_profit >= 10 else ("⚠️" if listing.estimated_profit < 0 else "➡️")
+            sell_line += f"  •  {profit_emoji} Gewinn: ~{listing.estimated_profit:+d} EUR"
+        lines.append(sell_line)
+
     # AI warning for non-original/modified parts
     if listing.ai_warning:
         lines.append(f"⚠️ {listing.ai_warning}")

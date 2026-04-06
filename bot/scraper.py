@@ -1,5 +1,6 @@
 # Kleinanzeigen scraper: fetches search result pages and listing detail pages,
 # parses them into Listing objects, and applies deal-quality filters.
+import json
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -78,6 +79,8 @@ class Listing:
     negotiable: bool = False  # True when the price has "VB" (Verhandlungsbasis)
     ai_score: Optional[int] = None  # 1-10 resale value score from Groq (None = not scored)
     ai_warning: str = ""  # Non-empty when Groq detected non-original parts or modifications
+    estimated_sell_price: Optional[float] = None  # Median eBay sold price from PricerBot API
+    estimated_profit: Optional[int] = None  # estimated_sell_price - listing price
 
 
 # Builds the Kleinanzeigen search URL.
@@ -199,9 +202,14 @@ def fetch_listings(query: str, page: int = 0) -> list[Listing]:
 
 
 # Parses a single article/li element into a Listing.
+# Strategy: extract title, description, and image from the JSON-LD block that
+# Kleinanzeigen embeds inside every <article> — this is far more stable than
+# navigating CSS class names that change on redesigns.  Only price, location,
+# and date still come from the surrounding HTML, using fixed schema-driven
+# class names that have been stable for years.
 def _parse_article(article) -> Optional[Listing]:
 
-    # --- ID ---
+    # --- ID (data attribute — very stable) ---
     listing_id = (
         article.get("data-adid")
         or article.get("data-ad-id")
@@ -210,27 +218,49 @@ def _parse_article(article) -> Optional[Listing]:
     if not listing_id:
         return None
 
-    # --- Title ---
-    title_el = (
-        article.select_one("h2.text-module-begin a")
-        or article.select_one(".ellipsis")
-        or article.select_one("a.ellipsis")
-        or article.select_one("h2 a")
-    )
-    title = title_el.get_text(strip=True) if title_el else ""
-    if not title:
-        return None
-
-    # --- URL ---
-    link_el = article.select_one("a[href]")
-    relative_url = link_el["href"] if link_el else ""
+    # --- URL (data-href attribute — no need to hunt for <a>) ---
+    relative_url = article.get("data-href", "")
+    if not relative_url:
+        link_el = article.select_one("a[href]")
+        relative_url = link_el["href"] if link_el else ""
     full_url = (
         f"https://www.kleinanzeigen.de{relative_url}"
         if relative_url.startswith("/")
         else relative_url
     )
 
-    # --- Price ---
+    # --- JSON-LD block inside the article (title, description, image) ---
+    # Kleinanzeigen embeds a structured ImageObject JSON-LD in every article.
+    # It contains reliable title + full description, independent of HTML layout.
+    ld_script = article.select_one('script[type="application/ld+json"]')
+    ld: dict = {}
+    if ld_script and ld_script.string:
+        try:
+            ld = json.loads(ld_script.string)
+        except (ValueError, TypeError):
+            pass
+
+    title = ld.get("title", "").strip()
+    description = ld.get("description", "").strip()
+    # contentUrl is the full-resolution image; fall back to <img src> if absent
+    image_url = ld.get("contentUrl", "")
+
+    if not title:
+        # Fallback to HTML if JSON-LD is missing (shouldn't happen, but be safe)
+        title_el = (
+            article.select_one("h2.text-module-begin a")
+            or article.select_one("a.ellipsis")
+            or article.select_one("h2 a")
+        )
+        title = title_el.get_text(strip=True) if title_el else ""
+    if not title:
+        return None
+
+    if not image_url:
+        img_el = article.select_one("img[src]")
+        image_url = img_el["src"] if img_el else ""
+
+    # --- Price (stable class name) ---
     price_el = (
         article.select_one("p.aditem-main--middle--price-shipping--price")
         or article.select_one(".aditem-main--middle--price")
@@ -239,26 +269,13 @@ def _parse_article(article) -> Optional[Listing]:
     price = parse_price(price_text)
     negotiable = bool(re.search(r'\bVB\b', price_text, re.IGNORECASE))
 
-    # --- Location ---
+    # --- Location (stable class name) ---
     location_el = article.select_one(".aditem-main--top--left")
     location = location_el.get_text(strip=True) if location_el else "Unbekannt"
-    # Strip any HTML entities from location text
     location = re.sub(r'&#?\w+;', '', location).strip() or "Unbekannt"
 
-    # --- Description ---
-    desc_el = article.select_one("p.aditem-main--middle--description")
-    description = desc_el.get_text(strip=True) if desc_el else ""
-
-    # --- Image ---
-    img_el = article.select_one("img[src]")
-    image_url = img_el["src"] if img_el else ""
-
-    # --- Posted at ---
-    date_el = (
-        article.select_one(".aditem-main--top--right")
-        or article.select_one("[class*='date']")
-        or article.select_one(".simpletag")
-    )
+    # --- Posted at (stable class name) ---
+    date_el = article.select_one(".aditem-main--top--right")
     posted_at = parse_posted_at(date_el.get_text(strip=True)) if date_el else None
 
     return Listing(
@@ -344,6 +361,45 @@ def is_new_seller(join_date: Optional[datetime]) -> bool:
     return join_date.date() >= yesterday
 
 
+# Returns True only if ALL query words appear within a short word-count window
+# of each other in the text.  Prevents false positives where a model number
+# (e.g. "14" or "s23") appears in an unrelated swap/trade list
+# ("iPhone 12 Tausch 13 14 15 Pro" or "Samsung S21 Tausch S22 S23").
+# Window = number of query words + 1 extra token (handles "galaxy", articles,
+# punctuation between words).  Any occurrence of the first query word is used
+# as the anchor.
+def _query_phrase_matches(query: str, text: str) -> bool:
+    words = query.lower().split()
+    if not words:
+        return True
+
+    def _pat(w: str) -> str:
+        # Numeric words: not matched when immediately followed by GB/TB (storage sizes)
+        if w.isdigit():
+            return rf'\b{re.escape(w)}\b(?!\s*(?:gb|tb))'
+        return rf'\b{re.escape(w)}\b'
+
+    # Tokenise by whitespace; window covers len(words)+1 tokens so that one
+    # extra filler word (colour, article, punctuation token) is tolerated.
+    # Examples:
+    #   "iphone 14 pro" (3 words) → window 4 tokens
+    #     ✓ "iphone 14 pro 128gb"
+    #     ✗ "iphone 12 blau tausch … 14 … pro"   (14/pro outside window)
+    #   "samsung s23" (2 words) → window 3 tokens
+    #     ✓ "samsung galaxy s23"
+    #     ✗ "samsung s21 tausch s22 s23"          (s23 outside window)
+    tokens = text.split()
+    window_size = len(words) + 1
+
+    for i, token in enumerate(tokens):
+        if not re.search(_pat(words[0]), token):
+            continue
+        window = " ".join(tokens[i: i + window_size])
+        if all(re.search(_pat(w), window) for w in words[1:]):
+            return True
+    return False
+
+
 # Checks whether a listing matches the configured criteria.
 # Returns (is_good, reason_string).
 def is_good_deal(listing: Listing, search_config: dict, global_blocked: Optional[list[str]] = None) -> tuple[bool, str]:
@@ -371,19 +427,13 @@ def is_good_deal(listing: Listing, search_config: dict, global_blocked: Optional
         if kw.lower() in text:
             return False, f"Gesperrtes Keyword gefunden: '{kw}'"
 
-    # Verify listing is actually about the searched product:
-    # all words from the query must appear as whole words in the listing text.
-    # For numeric words (e.g. "16" in "iphone 16"), exclude matches that are
-    # immediately followed by "GB" or "TB" so a storage size like "16 GB" doesn't
-    # fool the bot into thinking it found an iPhone 16.
-    query_words = search_config.get("query", "").lower().split()
-    for word in query_words:
-        if word.isdigit():
-            pattern = rf'\b{re.escape(word)}\b(?!\s*(?:gb|tb))'
-        else:
-            pattern = rf'\b{re.escape(word)}\b'
-        if not re.search(pattern, text):
-            return False, f"Suchwort '{word}' nicht im Inserat gefunden"
+    # Verify listing is actually about the searched product.
+    # All query words must appear as a near-phrase (within 30 chars of each other).
+    # This catches "iPhone 14 Pro" correctly while rejecting listings that only
+    # mention "14" and "Pro" in unrelated swap/trade lists ("Tausch 13 14 15 … Pro").
+    query = search_config.get("query", "")
+    if query and not _query_phrase_matches(query, text):
+        return False, f"Suchbegriff '{query}' nicht als zusammenhängende Phrase gefunden"
 
     # Required keywords
     for kw in keywords_required:
