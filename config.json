@@ -9,14 +9,16 @@
         "mini",
         "pro"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 12 Mini",
       "query": "iphone 12 mini",
       "max_price": 85,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 12 Pro",
@@ -26,14 +28,16 @@
       "keywords_blocked": [
         "max"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 12 Pro Max",
       "query": "iphone 12 pro max",
       "max_price": 170,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 13",
@@ -44,14 +48,16 @@
         "mini",
         "pro"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 13 Mini",
       "query": "iphone 13 mini",
       "max_price": 130,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 13 Pro",
@@ -61,14 +67,16 @@
       "keywords_blocked": [
         "max"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 13 Pro Max",
       "query": "iphone 13 pro max",
       "max_price": 260,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 14",
@@ -79,14 +87,16 @@
         "plus",
         "pro"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 14 Plus",
       "query": "iphone 14 plus",
       "max_price": 225,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 14 Pro",
@@ -96,14 +106,16 @@
       "keywords_blocked": [
         "max"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 14 Pro Max",
       "query": "iphone 14 pro max",
       "max_price": 340,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 15",
@@ -114,14 +126,16 @@
         "plus",
         "pro"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 15 Plus",
       "query": "iphone 15 plus",
       "max_price": 290,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 15 Pro",
@@ -131,14 +145,16 @@
       "keywords_blocked": [
         "max"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 15 Pro Max",
       "query": "iphone 15 pro max",
       "max_price": 420,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 16",
@@ -150,14 +166,16 @@
         "pro",
         "16e"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 16 Plus",
       "query": "iphone 16 plus",
       "max_price": 440,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 16 Pro",
@@ -167,35 +185,40 @@
       "keywords_blocked": [
         "max"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 16 Pro Max",
       "query": "iphone 16 pro max",
       "max_price": 530,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "iPhone 16e",
       "query": "iphone 16e",
       "max_price": 320,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung A54",
       "query": "samsung a54",
       "max_price": 85,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung A55",
       "query": "samsung a55",
       "max_price": 90,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S21",
@@ -207,14 +230,16 @@
         "ultra",
         "plus"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S21 FE",
       "query": "samsung s21 fe",
       "max_price": 80,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S21 Plus",
@@ -225,14 +250,16 @@
         "fe",
         "ultra"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S21 Ultra",
       "query": "samsung s21 ultra",
       "max_price": 130,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S22",
@@ -243,7 +270,8 @@
         "ultra",
         "plus"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S22 Plus",
@@ -253,14 +281,16 @@
       "keywords_blocked": [
         "ultra"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S22 Ultra",
       "query": "samsung s22 ultra",
       "max_price": 190,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S23",
@@ -272,14 +302,16 @@
         "ultra",
         "plus"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S23 FE",
       "query": "samsung s23 fe",
       "max_price": 130,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S23 Plus",
@@ -290,14 +322,16 @@
         "fe",
         "ultra"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S23 Ultra",
       "query": "samsung s23 ultra",
       "max_price": 250,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S24",
@@ -309,14 +343,16 @@
         "ultra",
         "plus"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S24 FE",
       "query": "samsung s24 fe",
       "max_price": 200,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S24 Plus",
@@ -327,14 +363,16 @@
         "fe",
         "ultra"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S24 Ultra",
       "query": "samsung s24 ultra",
       "max_price": 400,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S25",
@@ -346,14 +384,16 @@
         "ultra",
         "plus"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S25 FE",
       "query": "samsung s25 fe",
       "max_price": 290,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S25 Plus",
@@ -364,14 +404,16 @@
         "fe",
         "ultra"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Samsung S25 Ultra",
       "query": "samsung s25 ultra",
       "max_price": 570,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 7",
@@ -382,21 +424,24 @@
         "pro",
         "7a"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 7a",
       "query": "pixel 7a",
       "max_price": 90,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 7 Pro",
       "query": "pixel 7 pro",
       "max_price": 120,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 8",
@@ -408,21 +453,24 @@
         "xl",
         "8a"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 8a",
       "query": "pixel 8a",
       "max_price": 130,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 8 Pro",
       "query": "pixel 8 pro",
       "max_price": 200,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 9",
@@ -434,14 +482,16 @@
         "xl",
         "9a"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 9a",
       "query": "pixel 9a",
       "max_price": 200,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 9 Pro",
@@ -451,21 +501,24 @@
       "keywords_blocked": [
         "xl"
       ],
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Google Pixel 9 Pro XL",
       "query": "pixel 9 pro xl",
       "max_price": 400,
       "min_price": 35,
-      "enabled": true
+      "enabled": true,
+      "category_id": 163
     },
     {
       "name": "Raspberry Pi 5",
       "query": "raspberry pi 5",
       "max_price": 90,
       "min_price": 25,
-      "enabled": true
+      "enabled": true,
+      "category_id": 224
     }
   ],
   "settings": {

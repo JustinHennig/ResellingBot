@@ -361,41 +361,56 @@ def is_new_seller(join_date: Optional[datetime]) -> bool:
     return join_date.date() >= yesterday
 
 
-# Returns True only if ALL query words appear within a short word-count window
-# of each other in the text.  Prevents false positives where a model number
-# (e.g. "14" or "s23") appears in an unrelated swap/trade list
+# Returns True only if ALL query words appear within a short token-position
+# window of each other in the text.  Prevents false positives where a model
+# number (e.g. "14" or "s23") appears in an unrelated swap/trade list
 # ("iPhone 12 Tausch 13 14 15 Pro" or "Samsung S21 Tausch S22 S23").
-# Window = number of query words + 1 extra token (handles "galaxy", articles,
-# punctuation between words).  Any occurrence of the first query word is used
-# as the anchor.
+# Window = number of query words + 2 extra tokens (tolerates filler words like
+# "galaxy", colours, or punctuation tokens between query terms).
 def _query_phrase_matches(query: str, text: str) -> bool:
     words = query.lower().split()
     if not words:
         return True
 
+    # Normalise spaced model numbers before splitting into tokens:
+    # "S 24" → "s24", "A 55" → "a55".  Sellers often write Samsung model
+    # numbers with a space between the letter prefix and the digits.
+    text = re.sub(r'\b([a-z])\s+(\d{2,})\b', r'\1\2', text.lower())
+    # Normalise standalone "galaxy" → "samsung galaxy" so that listings
+    # written as "Galaxy S24" (without "Samsung") still match query "samsung s24".
+    text = re.sub(r'\bgalaxy\b', 'samsung galaxy', text)
+    tokens = text.split()
+    n = len(tokens)
+    window_size = len(words) + 2
+
     def _pat(w: str) -> str:
-        # Numeric words: not matched when immediately followed by GB/TB (storage sizes)
         if w.isdigit():
             return rf'\b{re.escape(w)}\b(?!\s*(?:gb|tb))'
         return rf'\b{re.escape(w)}\b'
 
-    # Tokenise by whitespace; window covers len(words)+1 tokens so that one
-    # extra filler word (colour, article, punctuation token) is tolerated.
-    # Examples:
-    #   "iphone 14 pro" (3 words) → window 4 tokens
-    #     ✓ "iphone 14 pro 128gb"
-    #     ✗ "iphone 12 blau tausch … 14 … pro"   (14/pro outside window)
-    #   "samsung s23" (2 words) → window 3 tokens
-    #     ✓ "samsung galaxy s23"
-    #     ✗ "samsung s21 tausch s22 s23"          (s23 outside window)
-    tokens = text.split()
-    window_size = len(words) + 1
+    def _find_positions(w: str, pattern: str) -> list:
+        # First verify the word itself is in this token (prevents matching in
+        # the *next* token when ctx = tok + next_tok).  Then re-check the full
+        # pattern with the next token appended so that (?!\s*gb) lookaheads work
+        # even when "gb" is a separate token.
+        base = rf'\b{re.escape(w)}\b'
+        result = []
+        for idx, tok in enumerate(tokens):
+            if not re.search(base, tok):
+                continue
+            ctx = tok + (" " + tokens[idx + 1] if idx + 1 < n else "")
+            if re.search(pattern, ctx):
+                result.append(idx)
+        return result
 
-    for i, token in enumerate(tokens):
-        if not re.search(_pat(words[0]), token):
-            continue
-        window = " ".join(tokens[i: i + window_size])
-        if all(re.search(_pat(w), window) for w in words[1:]):
+    patterns = [_pat(w) for w in words]
+    all_positions = [_find_positions(w, p) for w, p in zip(words, patterns)]
+
+    # Anchor at each occurrence of the first word; check all remaining words
+    # fall within window_size tokens.
+    for start in all_positions[0]:
+        end = start + window_size
+        if all(any(start <= pos < end for pos in positions) for positions in all_positions[1:]):
             return True
     return False
 

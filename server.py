@@ -291,17 +291,42 @@ def api_searches_add():
 
 
 # Clears the seen listings in memory and on disk so the bot re-evaluates all listings.
+# If the bot is running it is stopped first, the set is cleared, then the bot
+# is restarted — this prevents a concurrent save_seen_listings call from
+# immediately re-writing the cleared file with in-flight IDs.
 @app.route("/api/seen/clear", methods=["POST"])
 def api_seen_clear():
-    global _seen
+    global _bot_thread, _seen
     seen_file = _config.get("settings", {}).get("seen_listings_file", "seen_listings.json")
     seen_path = CONFIG_FILE.parent / seen_file
+
+    was_running = False
+    with _lock:
+        was_running = _state.get("running", False)
+
+    # Stop the bot so no in-flight search can overwrite the file after we clear it
+    if was_running:
+        _stop_event.set()
+        if _bot_thread:
+            _bot_thread.join(timeout=15)
+
     with _lock:
         _seen.clear()
+        _state["running"] = False
+
     try:
         seen_path.write_text("{}", encoding="utf-8")
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+    # Restart the bot if it was running before
+    if was_running:
+        _stop_event.clear()
+        with _lock:
+            _state["running"] = True
+        _bot_thread = threading.Thread(target=_bot_loop, daemon=True, name="bot-loop")
+        _bot_thread.start()
+
     return jsonify({"ok": True})
 
 

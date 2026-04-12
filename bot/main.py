@@ -18,7 +18,7 @@ import requests
 import schedule
 
 from bot.notifier import notify_new_listing, send_startup_message, validate_whatsapp_config
-from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal, is_new_seller
+from bot.scraper import Listing, fetch_listings, fetch_listing_details, is_good_deal
 from bot.ai_scorer import score_listing
 
 CONFIG_FILE = Path(__file__).parent.parent / "config.json"
@@ -34,10 +34,22 @@ _seen_lock = Lock()
 # Fetches the latest median and avg eBay sold price for a phone model from the
 # PricerBot REST API.  Returns (avg_price, median_price) or (None, None) on any
 # failure (API unavailable, model not yet priced, network error).
+def _normalize_pricer_model(name: str) -> str:
+    # PricerBot stores Samsung models as "Samsung Galaxy S24", "Samsung Galaxy A55", etc.
+    # ScraperBot config uses shorter names like "Samsung S24", "Samsung A54".
+    # Insert "Galaxy" when it is missing so the LIKE lookup matches.
+    import re as _re
+    return _re.sub(
+        r'^(Samsung)\s+(?!Galaxy\b)([A-Z]\d)',
+        r'\1 Galaxy \2',
+        name,
+    )
+
+
 def fetch_price_estimate(model_name: str, pricer_api_url: str) -> tuple[Optional[float], Optional[float]]:
     try:
         url = f"{pricer_api_url.rstrip('/')}/price"
-        response = requests.get(url, params={"model": model_name}, timeout=5)
+        response = requests.get(url, params={"model": _normalize_pricer_model(model_name)}, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return data.get("avg_price"), data.get("median_price")
@@ -221,23 +233,19 @@ def check_search(
 
         # Filter: ignore listings older than 30 minutes
         if listing.posted_at is not None and listing.posted_at < cutoff:
-            logger.debug(f"Skipped old listing {listing.listing_id} (posted {listing.posted_at:%H:%M})")
+            logger.info(f"Skipped old listing {listing.listing_id} '{listing.title[:40]}' (posted {listing.posted_at:%H:%M})")
             continue
 
         good, reason = is_good_deal(listing, search_config, global_blocked)
         if not good:
-            logger.debug(f"Skipped listing {listing.listing_id}: {reason}")
+            logger.info(f"Skipped listing {listing.listing_id} '{listing.title[:40]}': {reason}")
             continue
 
         if stop_event.is_set():
             return
 
-        # Fetch detail page once for full description + seller join date
-        full_desc, join_date = fetch_listing_details(listing.url)
-
-        if is_new_seller(join_date):
-            logger.info(f"Skipped listing {listing.listing_id}: new seller account")
-            continue
+        # Fetch detail page for full description
+        full_desc, _ = fetch_listing_details(listing.url)
 
         # Re-run keyword check against the full description
         if full_desc:
